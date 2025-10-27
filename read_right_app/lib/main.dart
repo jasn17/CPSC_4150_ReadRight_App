@@ -1,69 +1,31 @@
-
+// FILE: lib/main.dart
+// PURPOSE: App entrypoint. Initializes Provider models and boots the MaterialApp.
+// TOOLS: Flutter core; provider (MultiProvider + ChangeNotifier).
+// RELATIONSHIPS: Creates instances of models in lib/models/* and hands control to ReadRightApp in lib/app.dart.
+// FILE: lib/main.dart
+// PURPOSE: App entrypoint. Provides models and boots the app.
 import 'package:flutter/material.dart';
-import 'prefs/theme_prefs.dart';
-import 'screens/home_screen.dart';
+import 'package:provider/provider.dart';
 
+import 'app.dart';
+import 'models/auth_model.dart';
+import 'models/word_list_model.dart';
+import 'models/practice_model.dart';
+import 'models/progress_model.dart';
+import 'models/settings_model.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = ThemePrefs();
-  final dark = await prefs.getDarkMode();
-  runApp(MyApp(initialDark: dark, prefs: prefs));
-}
-
-
-class MyApp extends StatefulWidget {
-  final bool initialDark;
-  final ThemePrefs prefs;
-  const MyApp({super.key, required this.initialDark, required this.prefs});
-
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-
-class _MyAppState extends State<MyApp> {
-  late bool _dark;
-
-
-  @override
-  void initState() {
-    super.initState();
-    _dark = widget.initialDark;
-  }
-
-
-  void _toggleTheme() async {
-    setState(() => _dark = !_dark);
-    await widget.prefs.setDarkMode(_dark);
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Solo 4 Persistence',
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: _dark ? Brightness.dark : Brightness.light),
-      home: Builder(
-        builder: (context) => Scaffold(
-          body: const HomeScreen(),
-          drawer: Drawer(
-            child: SafeArea(
-              child: ListView(
-                children: [
-                  const ListTile(title: Text('Settings')),
-                  SwitchListTile(
-                    title: const Text('Dark mode'),
-                    value: _dark,
-                    onChanged: (_) => _toggleTheme(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthModel()..bootstrapDemo()),
+        ChangeNotifierProvider(create: (_) => SettingsModel()),
+        ChangeNotifierProvider(create: (_) => WordListModel()..loadFromAssets()),
+        ChangeNotifierProvider(create: (_) => PracticeModel()),
+        ChangeNotifierProvider(create: (_) => ProgressModel()),
+      ],
+      child: const ReadRightApp(),
+    ),
+  );
 }
