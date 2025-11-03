@@ -1,0 +1,18 @@
+{
+  "users": {
+    "8M8mR3yyirTfs5EUpI8ElO2UaQo1": {
+      "uid": "8M8mR3yyirTfs5EUpI8ElO2UaQo1",
+      "email": "teacher@test.com",
+      "username": "TestTeacher",
+      "role": "teacher",
+      "createdAt": 1730678400000
+    },
+    "hgW2vpNn3ZT2KRibWQAqHcIPdLl1": {
+      "uid": "hgW2vpNn3ZT2KRibWQAqHcIPdLl1",
+      "email": "student@test.com",
+      "username": "TestStudent",
+      "role": "student",
+      "createdAt": 1730678400001
+    }
+  }
+}
