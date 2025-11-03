@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1028438140957",
+    "project_id": "rtdb-read-right",
+    "storage_bucket": "rtdb-read-right.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1028438140957:android:6dc69c331fcd4ab3dbfef4",
+        "android_client_info": {
+          "package_name": "com.example.read_right_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGu9YdVd7t-amTM8bGtslFTRxzd11PcPU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

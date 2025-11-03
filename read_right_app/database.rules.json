@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'teacher')",
+        ".write": "auth != null && ((!data.exists() && auth.uid == $uid) || (auth.uid == $uid && !newData.child('role').exists()))",
+        ".validate": "newData.hasChildren(['email', 'username', 'role', 'uid'])",
+        "email": {
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$/)"
+        },
+        "username": {
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 30"
+        },
+        "role": {
+          ".validate": "newData.isString() && (newData.val() == 'student' || newData.val() == 'teacher') && (!data.exists() || data.val() == newData.val())"
+        },
+        "uid": {
+          ".validate": "newData.val() == $uid"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    }
+  }
+}
