@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'models/auth_model.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell_screen.dart';
+import 'screens/theme.dart';
+
 
 class ReadRightApp extends StatelessWidget {
   const ReadRightApp({super.key});
@@ -15,13 +17,19 @@ class ReadRightApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loggedIn = context.watch<AuthModel>().isLoggedIn;
+
     return MaterialApp(
       title: 'ReadRight',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
-      home: loggedIn ? const ShellScreen() : const LoginScreen(),
+      debugShowCheckedModeBanner: false,
+
+      // Apply your app-wide theme
+      theme: AppTheme.lightTheme,      // Light theme
+      darkTheme: AppTheme.darkTheme,   // Dark theme
+      themeMode: ThemeMode.system,     // Auto-switches with system preference
+
+      home: loggedIn
+          ? const ShellScreen()        // main app shell when logged in
+          : const LoginScreen(),       // login screen otherwise
     );
   }
 }
