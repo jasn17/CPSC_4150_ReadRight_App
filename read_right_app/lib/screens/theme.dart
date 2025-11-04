@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 /// Centralized app theme configuration using Material 3 and ColorScheme.
-/// Updated for Flutter 3.27+.
 class AppTheme {
   // ===== Brand Colors =====
   static const Color primary = Color(0xFF00B4D8);   // blue-ish
