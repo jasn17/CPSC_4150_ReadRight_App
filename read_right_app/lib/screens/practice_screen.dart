@@ -1,48 +1,161 @@
 // FILE: lib/screens/practice_screen.dart
-// PURPOSE: Shows target word and provides Record/Stop controls (skeleton).
-// TOOLS: Flutter core; provider (watch PracticeModel).
-// RELATIONSHIPS: Writes PracticeModel.startRecording()/stopRecording(); later will call AudioService -> STTService -> ScoringService.
+// PURPOSE: Conducts a pronunciation practice session.
+// RELATIONSHIPS: Reads from PracticeModel and WordListModel.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 import '../models/practice_model.dart';
+import '../widgets/confetti_overlay.dart';
 import '../widgets/primary_button.dart';
 
-class PracticeScreen extends StatelessWidget {
+class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
+
+  @override
+  State<PracticeScreen> createState() => _PracticeScreenState();
+}
+
+class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProviderStateMixin {
+  final FlutterTts _tts = FlutterTts();
+  bool _hasSpokenSentence = false; // ✅ prevents repeating sentence automatically
+
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
+  }
+
+  Future<void> _speak(String text) async {
+    await _tts.setLanguage("en-US");
+    await _tts.setSpeechRate(0.4);
+    await _tts.speak(text);
+  }
 
   @override
   Widget build(BuildContext context) {
     final pm = context.watch<PracticeModel>();
+    final target = pm.target;
+
+    // ✅ If the word is correct and we haven’t spoken the sentence yet, do it once
+    if (pm.lastResult?.correct == true && !_hasSpokenSentence && target != null) {
+      _hasSpokenSentence = true;
+      _speak(target.sentence);
+    }
+
+    // Reset speaker trigger when new word starts
+    if (pm.lastResult == null && _hasSpokenSentence) {
+      _hasSpokenSentence = false;
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Practice')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Text(
-              pm.target?.word ?? 'Pick a word from Lists',
-              style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
+      body: Stack(
+        children: [
+          if (target == null)
+            const Center(child: Text('Pick a word from Lists')),
+          if (target != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () async {
+                          if (pm.lastResult?.correct == true) {
+                            await _speak(target.sentence);
+                          } else {
+                            await _speak(target.word);
+                          }
+                        },
+                        child: pm.lastResult?.correct == true
+                            ? _SentenceCard(sentence: target.sentence)
+                            : _WordCard(word: target.word),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (pm.lastResult != null)
+                    _FeedbackBar(result: pm.lastResult!),
+                  const SizedBox(height: 16),
+                  PrimaryButton(
+                    label: pm.isRecording ? 'Recording...' : 'Tap to Record',
+                    onPressed: pm.isRecording ? null : pm.startRecording,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ConfettiOverlay(trigger: pm.lastResult?.correct == true),
+        ],
+      ),
+    );
+  }
+}
+
+class _WordCard extends StatelessWidget {
+  final String word;
+  const _WordCard({required this.word});
+
+  @override
+  Widget build(BuildContext context) => Card(
+        color: Colors.blue.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(48),
+          child: Center(
+            child: Text(
+              word,
+              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            if (pm.target?.sentence.isNotEmpty == true)
-              Text(pm.target!.sentence, textAlign: TextAlign.center),
-            const Spacer(),
-            PrimaryButton(
-              label: 'Fake Assess (for screenshots)',
-              onPressed: pm.target == null ? null : () {
-                context.read<PracticeModel>().fakeAssess();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fake assessment complete')),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
+          ),
         ),
-      ),
+      );
+}
+
+class _SentenceCard extends StatelessWidget {
+  final String sentence;
+  const _SentenceCard({required this.sentence});
+
+  @override
+  Widget build(BuildContext context) => Card(
+        color: Colors.green.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Text(
+              sentence,
+              style: const TextStyle(fontSize: 22),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+}
+
+class _FeedbackBar extends StatelessWidget {
+  final PracticeResult result;
+  const _FeedbackBar({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final emoji = result.correct ? '🎉' : '😕';
+    return Column(
+      children: [
+        Text('$emoji  ${result.correct ? "Great job!" : "Try again!"}',
+            style: const TextStyle(fontSize: 20)),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: result.score / 100,
+          backgroundColor: Colors.grey[300],
+          color: result.correct ? Colors.green : Colors.red,
+          minHeight: 10,
+        ),
+        const SizedBox(height: 4),
+        Text('Score: ${result.score}  |  Heard: "${result.transcript}"'),
+      ],
     );
   }
 }
