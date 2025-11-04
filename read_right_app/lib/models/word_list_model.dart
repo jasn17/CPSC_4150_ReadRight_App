@@ -26,12 +26,17 @@ class WordListModel extends ChangeNotifier {
       _selectedList == null ? [] : (_byList[_selectedList] ?? []);
   WordItem? get currentTarget => _currentTarget;
 
-  Future<void> loadFromAssets({String path = 'assets/seed_words.csv'}) async {
+  Future<void> loadFromAssets({
+    String path = 'assets/seed_words_with_sentences_complete.csv', // ✅ use your real file
+  }) async {
     final csv = await rootBundle.loadString(path);
-    // Expect CSV header: list,word,sentence (extra columns are ignored)
     final lines = const LineSplitter().convert(csv);
     if (lines.isEmpty) return;
-    final dataLines = (lines.first.toLowerCase().contains('list,word'))
+
+    final header = lines.first.toLowerCase();
+    final isWordSentenceFormat = header.startsWith('word');
+
+    final dataLines = (header.contains('word') || header.contains('list,word'))
         ? lines.skip(1)
         : lines;
 
@@ -39,15 +44,32 @@ class WordListModel extends ChangeNotifier {
       if (line.trim().isEmpty) continue;
       final parts = _safeSplitCsv(line);
       if (parts.isEmpty) continue;
-      final list = (parts.length > 0 ? parts[0] : 'Default').trim();
-      final word = (parts.length > 1 ? parts[1] : '').trim();
-      final sentence = (parts.length > 2 ? parts[2] : '').trim();
+
+      late final String list;
+      late final String word;
+      late final String sentence;
+
+      if (isWordSentenceFormat) {
+        // Handles "Word,Sentence 1,Sentence 2"
+        list = 'Dolch'; // default list name
+        word = (parts.length > 0 ? parts[0] : '').trim();
+        sentence = [
+          if (parts.length > 1) parts[1].trim(),
+          if (parts.length > 2) parts[2].trim(),
+        ].where((s) => s.isNotEmpty).join(' ');
+      } else {
+        // Handles "list,word,sentence"
+        list = (parts.length > 0 ? parts[0] : 'Default').trim();
+        word = (parts.length > 1 ? parts[1] : '').trim();
+        sentence = (parts.length > 2 ? parts[2] : '').trim();
+      }
+
       if (word.isEmpty) continue;
 
       final wi = WordItem(list: list, word: word, sentence: sentence);
       _byList.putIfAbsent(list, () => []).add(wi);
     }
-    // Select the first list by default
+
     _selectedList ??= lists.isNotEmpty ? lists.first : null;
     notifyListeners();
   }
