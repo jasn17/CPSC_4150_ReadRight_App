@@ -8,26 +8,41 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 class WordItem {
-  final String list;      // e.g., Dolch1, Phonics-CVC
-  final String word;      // e.g., cat
-  final String sentence;  // optional sample sentence
+  final String list; // e.g., Dolch1, Phonics-CVC
+  final String word; // e.g., cat
+  final String sentence; // optional sample sentence
+  final String sentence1; // first sentence
+  final String sentence2; // second sentence
 
-  WordItem({required this.list, required this.word, required this.sentence});
+  WordItem({
+    required this.list,
+    required this.word,
+    required this.sentence,
+    required this.sentence1,
+    required this.sentence2,
+  });
 }
 
 class WordListModel extends ChangeNotifier {
   final Map<String, List<WordItem>> _byList = {};
+  final List<WordItem> _allWords = [];
   String? _selectedList;
   WordItem? _currentTarget;
+  int _currentCardIndex = 0;
 
   List<String> get lists => _byList.keys.toList()..sort();
   String? get selectedList => _selectedList;
   List<WordItem> get wordsInSelected =>
       _selectedList == null ? [] : (_byList[_selectedList] ?? []);
   WordItem? get currentTarget => _currentTarget;
+  List<WordItem> get allWords => _allWords;
+  int get currentCardIndex => _currentCardIndex;
+  WordItem? get currentCard =>
+      _allWords.isNotEmpty ? _allWords[_currentCardIndex] : null;
 
   Future<void> loadFromAssets({
-    String path = 'assets/seed_words_with_sentences_complete.csv', // ✅ use your real file
+    String path =
+        'assets/seed_words_with_sentences_complete.csv', // ✅ use your real file
   }) async {
     final csv = await rootBundle.loadString(path);
     final lines = const LineSplitter().convert(csv);
@@ -48,26 +63,36 @@ class WordListModel extends ChangeNotifier {
       late final String list;
       late final String word;
       late final String sentence;
+      late final String sentence1;
+      late final String sentence2;
 
       if (isWordSentenceFormat) {
         // Handles "Word,Sentence 1,Sentence 2"
         list = 'Dolch'; // default list name
         word = (parts.length > 0 ? parts[0] : '').trim();
-        sentence = [
-          if (parts.length > 1) parts[1].trim(),
-          if (parts.length > 2) parts[2].trim(),
-        ].where((s) => s.isNotEmpty).join(' ');
+        sentence1 = (parts.length > 1 ? parts[1] : '').trim();
+        sentence2 = (parts.length > 2 ? parts[2] : '').trim();
+        sentence = [sentence1, sentence2].where((s) => s.isNotEmpty).join(' ');
       } else {
         // Handles "list,word,sentence"
         list = (parts.length > 0 ? parts[0] : 'Default').trim();
         word = (parts.length > 1 ? parts[1] : '').trim();
         sentence = (parts.length > 2 ? parts[2] : '').trim();
+        sentence1 = sentence;
+        sentence2 = '';
       }
 
       if (word.isEmpty) continue;
 
-      final wi = WordItem(list: list, word: word, sentence: sentence);
+      final wi = WordItem(
+        list: list,
+        word: word,
+        sentence: sentence,
+        sentence1: sentence1,
+        sentence2: sentence2,
+      );
       _byList.putIfAbsent(list, () => []).add(wi);
+      _allWords.add(wi);
     }
 
     _selectedList ??= lists.isNotEmpty ? lists.first : null;
@@ -81,6 +106,27 @@ class WordListModel extends ChangeNotifier {
 
   void chooseTarget(WordItem item) {
     _currentTarget = item;
+    notifyListeners();
+  }
+
+  // Card navigation methods
+  void nextCard() {
+    if (_allWords.isNotEmpty) {
+      _currentCardIndex = (_currentCardIndex + 1) % _allWords.length;
+      notifyListeners();
+    }
+  }
+
+  void previousCard() {
+    if (_allWords.isNotEmpty) {
+      _currentCardIndex = (_currentCardIndex - 1) % _allWords.length;
+      if (_currentCardIndex < 0) _currentCardIndex = _allWords.length - 1;
+      notifyListeners();
+    }
+  }
+
+  void resetCardIndex() {
+    _currentCardIndex = 0;
     notifyListeners();
   }
 

@@ -1,13 +1,15 @@
 // FILE: lib/screens/practice_screen.dart
-// PURPOSE: Conducts a pronunciation practice session.
+// PURPOSE: Conducts a pronunciation practice session with card mode and speech mode.
 // RELATIONSHIPS: Reads from PracticeModel and WordListModel.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 import '../models/practice_model.dart';
+import '../models/word_list_model.dart';
 import '../widgets/confetti_overlay.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/flip_card.dart';
 
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
@@ -16,9 +18,11 @@ class PracticeScreen extends StatefulWidget {
   State<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProviderStateMixin {
+class _PracticeScreenState extends State<PracticeScreen>
+    with SingleTickerProviderStateMixin {
   final FlutterTts _tts = FlutterTts();
-  bool _hasSpokenSentence = false; // ✅ prevents repeating sentence automatically
+  bool _hasSpokenSentence =
+      false; // ✅ prevents repeating sentence automatically
 
   @override
   void dispose() {
@@ -35,10 +39,21 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final pm = context.watch<PracticeModel>();
+    final wm = context.watch<WordListModel>();
     final target = pm.target;
+    final currentCard = wm.currentCard;
 
-    // ✅ If the word is correct and we haven’t spoken the sentence yet, do it once
-    if (pm.lastResult?.correct == true && !_hasSpokenSentence && target != null) {
+    // Start in card mode by default if no mode has been set
+    if (!pm.isCardMode && target == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        pm.setCardMode(true);
+      });
+    }
+
+    // ✅ If the word is correct and we haven't spoken the sentence yet, do it once
+    if (pm.lastResult?.correct == true &&
+        !_hasSpokenSentence &&
+        target != null) {
       _hasSpokenSentence = true;
       _speak(target.sentence);
     }
@@ -49,46 +64,111 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Practice')),
+      appBar: AppBar(
+        title: const Text('Practice'),
+        actions: [
+          IconButton(
+            icon: Icon(pm.isCardMode ? Icons.mic : Icons.style),
+            onPressed: () {
+              pm.toggleMode();
+            },
+            tooltip:
+                pm.isCardMode ? 'Switch to Speech Mode' : 'Switch to Card Mode',
+          ),
+        ],
+      ),
       body: Stack(
         children: [
-          if (target == null)
-            const Center(child: Text('Pick a word from Lists')),
-          if (target != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: () async {
-                          if (pm.lastResult?.correct == true) {
-                            await _speak(target.sentence);
-                          } else {
-                            await _speak(target.word);
-                          }
-                        },
-                        child: pm.lastResult?.correct == true
-                            ? _SentenceCard(sentence: target.sentence)
-                            : _WordCard(word: target.word),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (pm.lastResult != null)
-                    _FeedbackBar(result: pm.lastResult!),
-                  const SizedBox(height: 16),
-                  PrimaryButton(
-                    label: pm.isRecording ? 'Recording...' : 'Tap to Record',
-                    onPressed: pm.isRecording ? null : pm.startRecording,
-                  ),
-                  const SizedBox(height: 16),
-                ],
+          if (pm.isCardMode)
+            _buildCardMode(context, wm, currentCard)
+          else
+            _buildSpeechMode(context, pm, target),
+          if (!pm.isCardMode)
+            ConfettiOverlay(trigger: pm.lastResult?.correct == true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardMode(
+      BuildContext context, WordListModel wm, WordItem? currentCard) {
+    if (currentCard == null) {
+      return const Center(child: Text('Loading cards...'));
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: FlipCard(
+                word: currentCard.word,
+                sentence1: currentCard.sentence1,
+                sentence2: currentCard.sentence2,
               ),
             ),
-          ConfettiOverlay(trigger: pm.lastResult?.correct == true),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () {
+                wm.nextCard();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSpeechMode(
+      BuildContext context, PracticeModel pm, WordItem? target) {
+    if (target == null) {
+      return const Center(child: Text('Pick a word from Lists'));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Expanded(
+            child: Center(
+              child: GestureDetector(
+                onTap: () async {
+                  if (pm.lastResult?.correct == true) {
+                    await _speak(target.sentence);
+                  } else {
+                    await _speak(target.word);
+                  }
+                },
+                child: pm.lastResult?.correct == true
+                    ? _SentenceCard(sentence: target.sentence)
+                    : _WordCard(word: target.word),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (pm.lastResult != null) _FeedbackBar(result: pm.lastResult!),
+          const SizedBox(height: 16),
+          PrimaryButton(
+            label: pm.isRecording ? 'Recording...' : 'Tap to Record',
+            onPressed: pm.isRecording ? null : pm.startRecording,
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

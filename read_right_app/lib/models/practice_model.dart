@@ -24,10 +24,12 @@ class PracticeModel extends ChangeNotifier {
   WordItem? _target;
   PracticeResult? _last;
   bool _isRecording = false;
+  bool _isCardMode = false;
 
   WordItem? get target => _target;
   PracticeResult? get lastResult => _last;
   bool get isRecording => _isRecording;
+  bool get isCardMode => _isCardMode;
 
   final SpeechService _speech = SpeechService();
 
@@ -78,6 +80,16 @@ class PracticeModel extends ChangeNotifier {
 
   void reset() {
     _last = null;
+    notifyListeners();
+  }
+
+  void toggleMode() {
+    _isCardMode = !_isCardMode;
+    notifyListeners();
+  }
+
+  void setCardMode(bool cardMode) {
+    _isCardMode = cardMode;
     notifyListeners();
   }
 }
