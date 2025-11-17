@@ -14,5 +14,21 @@
       "role": "student",
       "createdAt": 1730678400001
     }
+  },
+  "classes": {
+    "class_test": {
+      "id": "class_test",
+      "name": "Test Class",
+      "teacherUid": "8M8mR3yyirTfs5EUpI8ElO2UaQo1",
+      "students": [
+        "hgW2vpNn3ZT2KRibWQAqHcIPdLl1"
+      ],
+      "createdAt": 1730678400002
+    }
+  },
+  "teacherClasses": {
+    "8M8mR3yyirTfs5EUpI8ElO2UaQo1": {
+      "class_test": true
+    }
   }
 }
