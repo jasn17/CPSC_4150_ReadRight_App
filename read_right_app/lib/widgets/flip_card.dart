@@ -1,7 +1,4 @@
 // FILE: lib/widgets/flip_card.dart
-// PURPOSE: Animated card that flips between word and sentences with tap gesture
-// TOOLS: Flutter animation controller and transform widgets
-
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -9,12 +6,14 @@ class FlipCard extends StatefulWidget {
   final String word;
   final String sentence1;
   final String sentence2;
+  final VoidCallback? onTap; // Add this callback
 
   const FlipCard({
     super.key,
     required this.word,
     required this.sentence1,
     required this.sentence2,
+    this.onTap, // Add this parameter
   });
 
   @override
@@ -56,6 +55,9 @@ class _FlipCardState extends State<FlipCard>
       _animationController.reverse();
     }
     _isShowingFront = !_isShowingFront;
+    
+    // Call the onTap callback when card is tapped
+    widget.onTap?.call();
   }
 
   @override
@@ -109,7 +111,7 @@ class _FlipCardState extends State<FlipCard>
             ),
             const SizedBox(height: 16),
             const Text(
-              'Tap to see sentences',
+              'Tap to hear word and see sentences',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey,
@@ -156,7 +158,7 @@ class _FlipCardState extends State<FlipCard>
               ),
               const SizedBox(height: 16),
               const Text(
-                'Tap to go back to word',
+                'Tap to hear and go back',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,

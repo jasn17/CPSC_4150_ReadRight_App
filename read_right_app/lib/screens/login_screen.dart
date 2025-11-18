@@ -42,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<AuthModel>().signInWithEmailPassword(
             email: _emailController.text.trim(),
             password: _passwordController.text,
+            context: context,
           );
       // On success, AuthModel notifies and app.dart routes to ShellScreen.
     } catch (e) {
