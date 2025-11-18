@@ -32,7 +32,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
           IconButton(
             icon: Icon(pm.isCardMode ? Icons.mic : Icons.style),
             onPressed: () => pm.toggleMode(),
-            tooltip: pm.isCardMode ? 'Switch to Speech Mode' : 'Switch to Card Mode',
+            tooltip:
+                pm.isCardMode ? 'Switch to Speech Mode' : 'Switch to Card Mode',
           ),
         ],
       ),
@@ -43,9 +44,22 @@ class _PracticeScreenState extends State<PracticeScreen> {
               // Progress bar: mastered / total
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: LinearProgressIndicator(
-                  value: totalWords == 0 ? 0 : mastered / totalWords,
-                  minHeight: 8,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Progress: $mastered / $totalWords',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: totalWords == 0 ? 0 : mastered / totalWords,
+                      minHeight: 8,
+                      color: Colors.green,
+                      backgroundColor: Colors.white,
+                    ),
+                  ],
                 ),
               ),
               Expanded(
@@ -62,7 +76,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  Widget _buildCardMode(BuildContext context, WordListModel wm, WordItem currentCard) {
+  Widget _buildCardMode(
+      BuildContext context, WordListModel wm, WordItem currentCard) {
     return Column(
       children: [
         Expanded(
@@ -99,7 +114,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  Widget _buildSpeechMode(BuildContext context, PracticeModel pm, WordItem target) {
+  Widget _buildSpeechMode(
+      BuildContext context, PracticeModel pm, WordItem target) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -122,7 +138,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
           const SizedBox(height: 16),
           PrimaryButton(
             label: pm.isRecording ? 'Recording...' : 'Tap to Record',
-            onPressed: pm.isRecording ? null : () => pm.startRecording(context.read<WordListModel>()),
+            onPressed: pm.isRecording
+                ? null
+                : () => pm.startRecording(context.read<WordListModel>()),
           ),
           const SizedBox(height: 16),
         ],
