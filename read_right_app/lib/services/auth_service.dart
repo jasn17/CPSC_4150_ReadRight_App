@@ -87,4 +87,55 @@ class AuthService {
       rethrow;
     }
   }
+
+  // Return list of class objects for a teacher (each Map includes the classId in 'id')
+  Future<List<Map<String, dynamic>>> getClassesForTeacher(String teacherUid) async {
+    try {
+      // Try reading an index at /teacherClasses/{teacherUid} which should contain
+      // a map of classId -> true. This avoids needing broad query permissions.
+      final idxEvent = await _database.child('teacherClasses').child(teacherUid).once();
+      final idxRaw = idxEvent.snapshot.value;
+      final List<Map<String, dynamic>> out = [];
+      if (idxRaw is Map) {
+        for (final entry in idxRaw.entries) {
+          final classId = entry.key.toString();
+          final clsEvent = await _database.child('classes').child(classId).once();
+          final clsRaw = clsEvent.snapshot.value;
+          if (clsRaw is Map) {
+            final map = clsRaw.map((k, v) => MapEntry(k.toString(), v));
+            map['id'] = classId;
+            out.add(map.cast<String, dynamic>());
+          }
+        }
+        return out;
+      }
+
+      // Fallback: use a query (requires index permissions in rules)
+      DatabaseEvent event = await _database.child('classes').orderByChild('teacherUid').equalTo(teacherUid).once();
+      final raw = event.snapshot.value;
+      if (raw == null) return [];
+      if (raw is Map) {
+        raw.forEach((key, value) {
+          if (value is Map) {
+            final map = value.map((k, v) => MapEntry(k.toString(), v));
+            map['id'] = key.toString();
+            out.add(map.cast<String, dynamic>());
+          }
+        });
+      }
+      return out;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Given a list of student UIDs, fetch their user profiles from /users
+  Future<List<Map<String, dynamic>>> getUserProfilesByUids(List<String> uids) async {
+    final List<Map<String, dynamic>> profiles = [];
+    for (final uid in uids) {
+      final p = await getUserData(uid);
+      if (p != null) profiles.add(p);
+    }
+    return profiles;
+  }
 }
