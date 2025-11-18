@@ -24,6 +24,24 @@ class SettingsModel extends ChangeNotifier {
   set threshold(int v) { _threshold = v; notifyListeners(); }
   set retainAudio(bool v) { _retainAudio = v; notifyListeners(); }
 
+
+  // ----------------- persistence -----------------
+
+  Future<void> _loadThreshold() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getInt('threshold');
+    if (stored != null) {
+      _threshold = stored;
+      notifyListeners();
+      }
+    }
+
+    Future<void> _saveThreshold(int v) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('threshold', v);
+    }
+
+
   // ------------------ theme logic ------------------
   static const _themeModeKey = 'themeMode';
   static const _themeIdKey = 'themeId';

@@ -12,6 +12,9 @@ import 'feedback_screen.dart';
 import 'progress_screen.dart';
 import 'teacher_dashboard_screen.dart';
 import 'settings_screen.dart';
+import 'home_screen.dart';
+
+
 
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
@@ -27,6 +30,7 @@ class _ShellScreenState extends State<ShellScreen> {
   Widget build(BuildContext context) {
     final isTeacher = context.watch<AuthModel>().role == UserRole.teacher;
     final pages = <Widget>[
+      const HomeScreen(),
       const WordListsScreen(),
       const PracticeScreen(),
       const FeedbackScreen(),
@@ -35,6 +39,7 @@ class _ShellScreenState extends State<ShellScreen> {
       const SettingsScreen(),
     ];
     final items = <BottomNavigationBarItem>[
+      const BottomNavigationBarItem(icon: Icon(Icons.house), label: 'Home'),
       const BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Lists'),
       const BottomNavigationBarItem(icon: Icon(Icons.mic), label: 'Practice'),
       const BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: 'Feedback'),
@@ -50,6 +55,11 @@ class _ShellScreenState extends State<ShellScreen> {
         items: items,
         type: BottomNavigationBarType.fixed,
         onTap: (i) => setState(() => _index = i),
+        selectedItemColor: Theme.of(context).colorScheme.secondary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.primary.computeLuminance() > 0.5
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.inversePrimary,
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../widgets/confetti_overlay.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/flip_card.dart';
 import '../widgets/sync_status_widget.dart';
+import 'package:read_right_app/widgets/character_widget.dart';
 
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
@@ -58,7 +59,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     LinearProgressIndicator(
                       value: totalWords == 0 ? 0 : mastered / totalWords,
                       minHeight: 8,
-                      color: Colors.green,
+                      color: Theme.of(context).colorScheme.secondary,
                       backgroundColor: Colors.white,
                     ),
                   ],
@@ -84,6 +85,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
     return Column(
       children: [
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [CharacterWidget(),
+          ],
+        ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -128,7 +135,13 @@ class _PracticeScreenState extends State<PracticeScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [CharacterWidget(),
+          ],
+          ),
+          const SizedBox(height: 16),
           Expanded(
             child: Center(
               child: pm.lastResult?.correct == true ||
@@ -146,11 +159,23 @@ class _PracticeScreenState extends State<PracticeScreen> {
           const SizedBox(height: 16),
           if (pm.lastResult != null) _FeedbackBar(result: pm.lastResult!),
           const SizedBox(height: 16),
-          PrimaryButton(
-            label: pm.isRecording ? 'Recording...' : 'Tap to Record',
+          ElevatedButton(
             onPressed: pm.isRecording
                 ? null
                 : () => pm.startRecording(context.read<WordListModel>()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: pm.isRecording
+                ? Colors.redAccent
+                : Theme.of(context).primaryColor,
+              foregroundColor: Theme.of(context).colorScheme.primary.computeLuminance() >= .5
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.inversePrimary,
+            ),
+            child: Text(
+              pm.isRecording
+                      ? 'Recording...'
+                      : 'Tap To Record',
+            ),
           ),
           const SizedBox(height: 16),
         ],
@@ -172,7 +197,7 @@ class _WordCard extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Card(
-          color: Colors.blue.shade50,
+          color: Theme.of(context).colorScheme.inversePrimary,
           child: Padding(
             padding: const EdgeInsets.all(48),
             child: Center(
@@ -181,7 +206,10 @@ class _WordCard extends StatelessWidget {
                 children: [
                   Text(
                     word,
-                    style: const TextStyle(
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.surface.computeLuminance() >= .5
+                          ? Theme.of(context).colorScheme.inverseSurface
+                          : Theme.of(context).colorScheme.surface,
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
                     ),
@@ -216,7 +244,7 @@ class _SentenceCard extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Card(
-          color: Colors.green.shade50,
+          color: Theme.of(context).colorScheme.secondary,
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Center(

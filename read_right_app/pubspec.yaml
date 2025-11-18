@@ -30,6 +30,10 @@ flutter:
   assets: 
     - assets/seed_words.csv
     - assets/seed_words_with_sentences_complete.csv
+    - assets/SourceImages/character1.png
+    - assets/SourceImages/character2.png
+    - assets/SourceImages/character3.png
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
