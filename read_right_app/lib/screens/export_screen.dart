@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/auth_model.dart';
 import '../services/export_service.dart';
+import 'data_preview_screen.dart';
 
 class ExportScreen extends StatefulWidget {
   const ExportScreen({super.key});
@@ -70,6 +71,90 @@ class _ExportScreenState extends State<ExportScreen> {
     await _loadStatistics();
   }
 
+  Future<void> _previewCSV() async {
+    final authModel = context.read<AuthModel>();
+    final userId = authModel.uid;
+    
+    if (userId == null) return;
+
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final csv = await _exportService.exportToCSV(
+        userId: userId,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DataPreviewScreen(
+              data: csv,
+              title: 'CSV Preview',
+              format: 'csv',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Preview failed: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isExporting = false;
+      });
+    }
+  }
+
+  Future<void> _previewJSON() async {
+    final authModel = context.read<AuthModel>();
+    final userId = authModel.uid;
+    
+    if (userId == null) return;
+
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final json = await _exportService.exportToJSON(
+        userId: userId,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DataPreviewScreen(
+              data: json,
+              title: 'JSON Preview',
+              format: 'json',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Preview failed: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isExporting = false;
+      });
+    }
+  }
+
   Future<void> _exportCSV() async {
     final authModel = context.read<AuthModel>();
     final userId = authModel.uid;
@@ -90,7 +175,10 @@ class _ExportScreenState extends State<ExportScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('CSV exported successfully!')),
+          const SnackBar(
+            content: Text('CSV saved to Downloads folder!'),
+            duration: Duration(seconds: 3),
+          ),
         );
       }
     } catch (e) {
@@ -126,7 +214,10 @@ class _ExportScreenState extends State<ExportScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('JSON exported successfully!')),
+          const SnackBar(
+            content: Text('JSON saved to Downloads folder!'),
+            duration: Duration(seconds: 3),
+          ),
         );
       }
     } catch (e) {
@@ -244,24 +335,60 @@ class _ExportScreenState extends State<ExportScreen> {
             ),
             const SizedBox(height: 12),
 
-            ElevatedButton.icon(
-              onPressed: _isExporting ? null : _exportCSV,
-              icon: const Icon(Icons.table_chart),
-              label: const Text('Export as CSV'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-              ),
+            // CSV Row
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isExporting ? null : _previewCSV,
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Preview CSV'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isExporting ? null : _exportCSV,
+                    icon: const Icon(Icons.download),
+                    label: const Text('Export CSV'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 12),
 
-            ElevatedButton.icon(
-              onPressed: _isExporting ? null : _exportJSON,
-              icon: const Icon(Icons.code),
-              label: const Text('Export as JSON'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-              ),
+            // JSON Row
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isExporting ? null : _previewJSON,
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Preview JSON'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isExporting ? null : _exportJSON,
+                    icon: const Icon(Icons.download),
+                    label: const Text('Export JSON'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             if (_isExporting) ...[
@@ -274,7 +401,7 @@ class _ExportScreenState extends State<ExportScreen> {
             const SizedBox(height: 24),
 
             const Text(
-              'Note: Exported files will include all practice attempts for the selected date range. You can open CSV files in Excel or Google Sheets.',
+              'Note: Preview shows data in the app. Export saves files to Downloads folder that you can open in Excel or Google Sheets.',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
