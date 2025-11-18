@@ -2,7 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/speech_service.dart';
 import '../services/scoring_service.dart';
-import 'word_list_model.dart';
+import '../services/sync_service.dart';
+import '../models/word_list_model.dart';
+import '../models/practice_attempt.dart';
+import 'package:uuid/uuid.dart';
 
 class PracticeResult {
   final String transcript;
@@ -21,6 +24,7 @@ class PracticeModel extends ChangeNotifier {
   PracticeResult? _last;
   bool _isRecording = false;
   bool _isCardMode = false;
+  String? _userId; // Current user ID
 
   WordItem? get target => _target;
   PracticeResult? get lastResult => _last;
@@ -28,14 +32,19 @@ class PracticeModel extends ChangeNotifier {
   bool get isCardMode => _isCardMode;
 
   final SpeechService _speech = SpeechService();
+  final SyncService _syncService;
+  final Uuid _uuid = const Uuid();
 
-  Future<void> speakWord(String word) async {
-    await _speech.speak(word);
-  }
-
-  Map<String, Set<String>> masteredWordsByList =
-      {}; // list -> set of mastered words
+  Map<String, Set<String>> masteredWordsByList = {}; // list -> set of mastered words
   int currentWordIndex = 0;
+
+  // Constructor now requires SyncService
+  PracticeModel(this._syncService);
+
+  /// Set the current user ID
+  void setUserId(String userId) {
+    _userId = userId;
+  }
 
   /// Public setter for target
   void setTarget(WordItem item) {
@@ -60,21 +69,19 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Speak a word using TTS
+  Future<void> speakWord(String word) async {
+    await _speech.speak(word);
+  }
+
   /// Initialize from WordListModel and persisted data
-  Future<void> init(WordListModel wordListModel) async {
+  Future<void> init(WordListModel wordListModel, String userId) async {
+    _userId = userId;
     final prefs = await SharedPreferences.getInstance();
+    masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] =
+        prefs.getStringList('mastered_${wordListModel.selectedList}')?.toSet() ?? {};
 
-    // Ensure we have a selected list
-    final selectedList = wordListModel.selectedList ?? 'Dolch';
-
-    // Load mastered words for the current list
-    masteredWordsByList[selectedList] =
-        prefs.getStringList('mastered_$selectedList')?.toSet() ?? {};
-
-    // Set the first unmastered word as target
     _advanceToNextWord(wordListModel);
-
-    notifyListeners();
   }
 
   void _advanceToNextWord(WordListModel wordListModel) {
@@ -97,15 +104,29 @@ class PracticeModel extends ChangeNotifier {
   }
 
   /// Handle answer after recording
-  Future<void> handleAnswer(
-      String transcript, WordListModel wordListModel) async {
-    if (_target == null) return;
+  Future<void> handleAnswer(String transcript, WordListModel wordListModel) async {
+    if (_target == null || _userId == null) return;
 
     final score = ScoringService.computeScore(transcript, _target!.word);
     final correct = score > 80;
 
-    _last =
-        PracticeResult(transcript: transcript, score: score, correct: correct);
+    _last = PracticeResult(transcript: transcript, score: score, correct: correct);
+
+    // Create practice attempt record
+    final attempt = PracticeAttempt(
+      id: _uuid.v4(),
+      userId: _userId!,
+      wordList: wordListModel.selectedList ?? 'Dolch',
+      targetWord: _target!.word,
+      transcript: transcript,
+      score: score,
+      correct: correct,
+      timestamp: DateTime.now(),
+      synced: false,
+    );
+
+    // Save to local DB and queue for sync
+    await _syncService.saveAttempt(attempt);
 
     // Mark mastered if correct
     if (correct) {
@@ -114,8 +135,7 @@ class PracticeModel extends ChangeNotifier {
       masteredWordsByList[list]!.add(_target!.word);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(
-          'mastered_$list', masteredWordsByList[list]!.toList());
+      await prefs.setStringList('mastered_$list', masteredWordsByList[list]!.toList());
     }
 
     notifyListeners();
@@ -140,7 +160,7 @@ class PracticeModel extends ChangeNotifier {
 
     try {
       await _speech.stopListening();
-      final transcript = await _speech.recordOnce(timeoutSeconds: 7);
+      final transcript = await _speech.recordOnce(timeoutSeconds: 5);
 
       await handleAnswer(transcript ?? '', wordListModel);
     } catch (e) {

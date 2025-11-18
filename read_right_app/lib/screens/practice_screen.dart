@@ -5,6 +5,7 @@ import '../models/word_list_model.dart';
 import '../widgets/confetti_overlay.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/flip_card.dart';
+import '../widgets/sync_status_widget.dart';
 
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
@@ -42,6 +43,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
           Column(
             children: [
               // Progress bar: mastered / total
+              const SyncStatusWidget(),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
