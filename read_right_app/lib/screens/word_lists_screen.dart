@@ -1,8 +1,3 @@
-// FILE: lib/screens/word_lists_screen.dart
-// PURPOSE: Select a word list and browse words in that list.
-// TOOLS: Flutter core; provider (watch WordListModel).
-// RELATIONSHIPS: Reads WordListModel.selectedList and .words; (future) sets targets in PracticeModel.
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/word_list_model.dart';
@@ -25,7 +20,9 @@ class WordListsScreen extends StatelessWidget {
           if (lists.isEmpty)
             const Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('No lists found. Check assets/seed_words.csv in pubspec.yaml.'),
+              child: Text(
+                'No lists found. Check assets/seed_words.csv in pubspec.yaml.',
+              ),
             ),
           if (lists.isNotEmpty)
             SizedBox(
