@@ -76,43 +76,49 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  Widget _buildCardMode(
-      BuildContext context, WordListModel wm, WordItem currentCard) {
-    return Column(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: FlipCard(
-                word: currentCard.word,
-                sentence1: currentCard.sentence1,
-                sentence2: currentCard.sentence2,
-              ),
-            ),
-          ),
-        ),
-        Padding(
+Widget _buildCardMode(
+    BuildContext context, WordListModel wm, WordItem currentCard) {
+  final pm = context.read<PracticeModel>();
+  
+  return Column(
+    children: [
+      Expanded(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () => wm.nextCard(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text(
-                'Next',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+          child: Center(
+            child: FlipCard(
+              word: currentCard.word,
+              sentence1: currentCard.sentence1,
+              sentence2: currentCard.sentence2,
+              onTap: () {
+                // Speak the word when card is tapped
+                pm.speakWord(currentCard.word);
+              },
             ),
           ),
         ),
-      ],
-    );
-  }
+      ),
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: () => wm.nextCard(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text(
+              'Next',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _buildSpeechMode(
       BuildContext context, PracticeModel pm, WordItem target) {
