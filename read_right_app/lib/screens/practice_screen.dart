@@ -127,7 +127,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 onTap: () async {
                   // Replay word or sentence
                 },
-                child: pm.lastResult?.correct == true
+                child: pm.lastResult?.correct == true || pm.lastResult?.correct == false
                     ? _SentenceCard(sentence: target.sentence)
                     : _WordCard(word: target.word),
               ),
