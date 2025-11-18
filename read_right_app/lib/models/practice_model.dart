@@ -29,7 +29,8 @@ class PracticeModel extends ChangeNotifier {
 
   final SpeechService _speech = SpeechService();
 
-  Map<String, Set<String>> masteredWordsByList = {}; // list -> set of mastered words
+  Map<String, Set<String>> masteredWordsByList =
+      {}; // list -> set of mastered words
   int currentWordIndex = 0;
 
   /// Public setter for target
@@ -58,10 +59,18 @@ class PracticeModel extends ChangeNotifier {
   /// Initialize from WordListModel and persisted data
   Future<void> init(WordListModel wordListModel) async {
     final prefs = await SharedPreferences.getInstance();
-    masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] =
-        prefs.getStringList('mastered_${wordListModel.selectedList}')?.toSet() ?? {};
 
+    // Ensure we have a selected list
+    final selectedList = wordListModel.selectedList ?? 'Dolch';
+
+    // Load mastered words for the current list
+    masteredWordsByList[selectedList] =
+        prefs.getStringList('mastered_$selectedList')?.toSet() ?? {};
+
+    // Set the first unmastered word as target
     _advanceToNextWord(wordListModel);
+
+    notifyListeners();
   }
 
   void _advanceToNextWord(WordListModel wordListModel) {
@@ -84,13 +93,15 @@ class PracticeModel extends ChangeNotifier {
   }
 
   /// Handle answer after recording
-  Future<void> handleAnswer(String transcript, WordListModel wordListModel) async {
+  Future<void> handleAnswer(
+      String transcript, WordListModel wordListModel) async {
     if (_target == null) return;
 
     final score = ScoringService.computeScore(transcript, _target!.word);
     final correct = score > 80;
 
-    _last = PracticeResult(transcript: transcript, score: score, correct: correct);
+    _last =
+        PracticeResult(transcript: transcript, score: score, correct: correct);
 
     // Mark mastered if correct
     if (correct) {
@@ -99,7 +110,8 @@ class PracticeModel extends ChangeNotifier {
       masteredWordsByList[list]!.add(_target!.word);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('mastered_$list', masteredWordsByList[list]!.toList());
+      await prefs.setStringList(
+          'mastered_$list', masteredWordsByList[list]!.toList());
     }
 
     notifyListeners();
