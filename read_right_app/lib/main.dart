@@ -1,7 +1,4 @@
 // FILE: lib/main.dart
-// PURPOSE: App entrypoint. Initializes Firebase, provides models, and boots the app.
-// TOOLS: Flutter core; provider (MultiProvider + ChangeNotifier); firebase_core.
-// RELATIONSHIPS: Creates instances of models in lib/models/* and hands control to ReadRightApp in lib/app.dart.
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,13 +17,24 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Create instances
+  final wordListModel = WordListModel();
+  final practiceModel = PracticeModel();
+
+  // Load word lists first
+  await wordListModel.loadFromAssets();
+  
+  // Then initialize practice model with the loaded words
+  await practiceModel.init(wordListModel);
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthModel(authService: AuthService())),
         ChangeNotifierProvider(create: (_) => SettingsModel()),
-        ChangeNotifierProvider(create: (_) => WordListModel()..loadFromAssets()),
-        ChangeNotifierProvider(create: (_) => PracticeModel()),
+        ChangeNotifierProvider.value(value: wordListModel),
+        ChangeNotifierProvider.value(value: practiceModel),
         ChangeNotifierProvider(create: (_) => ProgressModel()),
       ],
       child: const ReadRightApp(),
