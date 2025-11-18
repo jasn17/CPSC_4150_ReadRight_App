@@ -24,26 +24,31 @@ Future<void> main() async {
   // Create instances
   final wordListModel = WordListModel();
   final syncService = SyncService(); // Create sync service
-  final practiceModel = PracticeModel(syncService); // Pass sync service to practice model
+  final practiceModel =
+      PracticeModel(syncService); // Pass sync service to practice model
 
   // Load word lists first
   await wordListModel.loadFromAssets();
-  
+
   // Initialize practice model (userId will be set after login)
   // We'll set it to a default for now, will update after auth
   await practiceModel.init(wordListModel, 'guest');
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthModel(authService: AuthService())),
-        ChangeNotifierProvider(create: (_) => SettingsModel()),
-        ChangeNotifierProvider.value(value: wordListModel),
-        ChangeNotifierProvider.value(value: syncService), // Provide sync service
-        ChangeNotifierProvider.value(value: practiceModel),
-        //ChangeNotifier(create: (_) => ProgressModel()),
-      ],
-      child: const ReadRightApp(),
-    ),
-  );
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(
+          create: (_) => AuthModel(authService: AuthService())),
+      ChangeNotifierProvider(create: (_) => SettingsModel()),
+      ChangeNotifierProvider.value(value: wordListModel),
+
+      // Correct provider for SyncService (ChangeNotifier!)
+      ChangeNotifierProvider<SyncService>.value(value: syncService),
+
+      // PracticeModel depends on SyncService
+      ChangeNotifierProvider.value(value: practiceModel),
+
+      ChangeNotifierProvider(create: (_) => ProgressModel()),
+    ],
+    child: const ReadRightApp(),
+  ));
 }
