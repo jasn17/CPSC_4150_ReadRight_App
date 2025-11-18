@@ -10,20 +10,15 @@ class WordListsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final model = context.watch<WordListModel>();
+    final pm = context.watch<PracticeModel>();
     final lists = model.lists;
     final words = model.wordsInSelected;
+    final mastered = pm.masteredWordsByList[model.selectedList] ?? {};
 
     return Scaffold(
       appBar: AppBar(title: const Text('Word Lists')),
       body: Column(
         children: [
-          if (lists.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                'No lists found. Check assets/seed_words.csv in pubspec.yaml.',
-              ),
-            ),
           if (lists.isNotEmpty)
             SizedBox(
               height: 48,
@@ -38,7 +33,7 @@ class WordListsScreen extends StatelessWidget {
                   return ChoiceChip(
                     label: Text(list),
                     selected: selected,
-                    onSelected: (_) => context.read<WordListModel>().selectList(list),
+                    onSelected: (_) => model.selectList(list),
                   );
                 },
               ),
@@ -49,14 +44,17 @@ class WordListsScreen extends StatelessWidget {
               itemCount: words.length,
               itemBuilder: (_, i) {
                 final w = words[i];
-                return InkWell(
-                  onTap: () {
-                    context.read<PracticeModel>().setTarget(w);
-                    ScaffoldMessenger.of(_).showSnackBar(
-                      SnackBar(content: Text('Selected "${w.word}" for practice')),
-                    );
-                  },
-                  child: WordCard(word: w.word, sentence: w.sentence),
+                final isMastered = mastered.contains(w.word);
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    title: Text(w.word),
+                    subtitle: Text(w.sentence),
+                    trailing: isMastered
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : null,
+                    onTap: () => context.read<PracticeModel>().setTarget(w),
+                  ),
                 );
               },
             ),
