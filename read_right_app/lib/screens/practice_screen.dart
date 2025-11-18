@@ -76,49 +76,49 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-Widget _buildCardMode(
-    BuildContext context, WordListModel wm, WordItem currentCard) {
-  final pm = context.read<PracticeModel>();
-  
-  return Column(
-    children: [
-      Expanded(
-        child: Padding(
+  Widget _buildCardMode(
+      BuildContext context, WordListModel wm, WordItem currentCard) {
+    final pm = context.read<PracticeModel>();
+
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: FlipCard(
+                word: currentCard.word,
+                sentence1: currentCard.sentence1,
+                sentence2: currentCard.sentence2,
+                onTap: () {
+                  // Speak the word when card is tapped
+                  pm.speakWord(currentCard.word);
+                },
+              ),
+            ),
+          ),
+        ),
+        Padding(
           padding: const EdgeInsets.all(16),
-          child: Center(
-            child: FlipCard(
-              word: currentCard.word,
-              sentence1: currentCard.sentence1,
-              sentence2: currentCard.sentence2,
-              onTap: () {
-                // Speak the word when card is tapped
-                pm.speakWord(currentCard.word);
-              },
+          child: SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () => wm.nextCard(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ),
-      ),
-      Padding(
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () => wm.nextCard(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text(
-              'Next',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   Widget _buildSpeechMode(
       BuildContext context, PracticeModel pm, WordItem target) {
@@ -129,14 +129,16 @@ Widget _buildCardMode(
           const SizedBox(height: 12),
           Expanded(
             child: Center(
-              child: GestureDetector(
-                onTap: () async {
-                  // Replay word or sentence
-                },
-                child: pm.lastResult?.correct == true || pm.lastResult?.correct == false
-                    ? _SentenceCard(sentence: target.sentence)
-                    : _WordCard(word: target.word),
-              ),
+              child: pm.lastResult?.correct == true ||
+                      pm.lastResult?.correct == false
+                  ? _SentenceCard(
+                      sentence: target.sentence,
+                      onTap: () => pm.speakWord(target.sentence),
+                    )
+                  : _WordCard(
+                      word: target.word,
+                      onTap: () => pm.speakWord(target.word),
+                    ),
             ),
           ),
           const SizedBox(height: 16),
@@ -157,18 +159,42 @@ Widget _buildCardMode(
 
 class _WordCard extends StatelessWidget {
   final String word;
-  const _WordCard({required this.word});
+  final VoidCallback? onTap;
+
+  const _WordCard({
+    required this.word,
+    this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) => Card(
-        color: Colors.blue.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(48),
-          child: Center(
-            child: Text(
-              word,
-              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Card(
+          color: Colors.blue.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(48),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    word,
+                    style: const TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Tap to hear word',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -177,18 +203,32 @@ class _WordCard extends StatelessWidget {
 
 class _SentenceCard extends StatelessWidget {
   final String sentence;
-  const _SentenceCard({required this.sentence});
+  final VoidCallback? onTap;
+
+  const _SentenceCard({
+    required this.sentence,
+    this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) => Card(
-        color: Colors.green.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: Text(
-              sentence,
-              style: const TextStyle(fontSize: 22),
-              textAlign: TextAlign.center,
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Card(
+          color: Colors.green.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    sentence,
+                    style: const TextStyle(fontSize: 22),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
         ),
