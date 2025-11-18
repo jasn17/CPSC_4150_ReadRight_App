@@ -53,6 +53,75 @@ class SettingsScreen extends StatelessWidget {
             value: s.retainAudio,
             onChanged: (v) => context.read<SettingsModel>().retainAudio = v,
           ),
+
+          const Divider(),
+          const ListTile(title: Text('Theme Style')),
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: s.themes.length,
+              itemBuilder: (context, index) {
+                final theme = s.themes[index];
+                final isSelected = theme.id == s.themeId;
+
+                return GestureDetector(
+                  onTap: () => context.read<SettingsModel>().themeId = theme.id,
+                  child: Container(
+                    width: 80,
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color: theme.lightTheme.colorScheme.primary.withOpacity(0.2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        theme.name,
+                        style: const TextStyle(fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const Divider(),
+          const ListTile(title: Text('Theme Mode')),
+
+          RadioListTile<ThemeMode>(
+            title: const Text('System Default'),
+            value: ThemeMode.system,
+            groupValue: s.themeMode,
+            onChanged: (v) {
+              context.read<SettingsModel>().themeMode = v!;
+            },
+          ),
+
+          RadioListTile<ThemeMode>(
+            title: const Text('Light'),
+            value: ThemeMode.light,
+            groupValue: s.themeMode,
+            onChanged: (v) {
+              context.read<SettingsModel>().themeMode = v!;
+            },
+          ),
+
+          RadioListTile<ThemeMode>(
+            title: const Text('Dark'),
+            value: ThemeMode.dark,
+            groupValue: s.themeMode,
+            onChanged: (v) {
+              context.read<SettingsModel>().themeMode = v!;
+            },
+          ),
+
           const Divider(),
           ListTile(
             title: const Text('Sign Out'),
