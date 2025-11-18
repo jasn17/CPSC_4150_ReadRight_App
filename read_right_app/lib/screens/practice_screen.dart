@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 import '../models/practice_model.dart';
 import '../models/word_list_model.dart';
@@ -14,47 +13,17 @@ class PracticeScreen extends StatefulWidget {
   State<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProviderStateMixin {
-  final FlutterTts _tts = FlutterTts();
-  bool _hasSpokenSentence = false;
-
-  @override
-  void dispose() {
-    _tts.stop();
-    super.dispose();
-  }
-
-  Future<void> _speak(String text) async {
-    await _tts.setLanguage("en-US");
-    await _tts.setSpeechRate(0.4);
-    await _tts.speak(text);
-  }
-
+class _PracticeScreenState extends State<PracticeScreen> {
   @override
   Widget build(BuildContext context) {
     final pm = context.watch<PracticeModel>();
     final wm = context.watch<WordListModel>();
-
-    // Auto-select first word from Dolch
-    pm.initFromWordListModel(wm);
-
     final target = pm.target;
-    final currentCard = wm.currentCard;
 
-    if (!pm.isCardMode && target == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        pm.setCardMode(true);
-      });
-    }
+    if (target == null) return const Center(child: CircularProgressIndicator());
 
-    if (pm.lastResult?.correct == true && !_hasSpokenSentence && target != null) {
-      _hasSpokenSentence = true;
-      _speak(target.sentence);
-    }
-
-    if (pm.lastResult == null && _hasSpokenSentence) {
-      _hasSpokenSentence = false;
-    }
+    final mastered = pm.masteredCount(wm.selectedList ?? '');
+    final totalWords = wm.wordsInSelected.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,27 +31,38 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
         actions: [
           IconButton(
             icon: Icon(pm.isCardMode ? Icons.mic : Icons.style),
-            onPressed: () {
-              pm.toggleMode();
-            },
+            onPressed: () => pm.toggleMode(),
             tooltip: pm.isCardMode ? 'Switch to Speech Mode' : 'Switch to Card Mode',
           ),
         ],
       ),
       body: Stack(
         children: [
-          if (pm.isCardMode)
-            _buildCardMode(context, wm, currentCard)
-          else
-            _buildSpeechMode(context, pm, target),
-          if (!pm.isCardMode) ConfettiOverlay(trigger: pm.lastResult?.correct == true),
+          Column(
+            children: [
+              // Progress bar: mastered / total
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: LinearProgressIndicator(
+                  value: totalWords == 0 ? 0 : mastered / totalWords,
+                  minHeight: 8,
+                ),
+              ),
+              Expanded(
+                child: pm.isCardMode
+                    ? _buildCardMode(context, wm, target)
+                    : _buildSpeechMode(context, pm, target),
+              ),
+            ],
+          ),
+          if (!pm.isCardMode)
+            ConfettiOverlay(trigger: pm.lastResult?.correct == true),
         ],
       ),
     );
   }
 
-  Widget _buildCardMode(BuildContext context, WordListModel wm, WordItem? currentCard) {
-    if (currentCard == null) return const Center(child: Text('Loading cards...'));
+  Widget _buildCardMode(BuildContext context, WordListModel wm, WordItem currentCard) {
     return Column(
       children: [
         Expanded(
@@ -103,9 +83,7 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: () {
-                wm.nextCard();
-              },
+              onPressed: () => wm.nextCard(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
@@ -121,8 +99,7 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildSpeechMode(BuildContext context, PracticeModel pm, WordItem? target) {
-    if (target == null) return const Center(child: Text('Pick a word from Lists'));
+  Widget _buildSpeechMode(BuildContext context, PracticeModel pm, WordItem target) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -132,11 +109,7 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
             child: Center(
               child: GestureDetector(
                 onTap: () async {
-                  if (pm.lastResult?.correct == true) {
-                    await _speak(target.sentence);
-                  } else {
-                    await _speak(target.word);
-                  }
+                  // Replay word or sentence
                 },
                 child: pm.lastResult?.correct == true
                     ? _SentenceCard(sentence: target.sentence)
@@ -149,7 +122,7 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
           const SizedBox(height: 16),
           PrimaryButton(
             label: pm.isRecording ? 'Recording...' : 'Tap to Record',
-            onPressed: pm.isRecording ? null : pm.startRecording,
+            onPressed: pm.isRecording ? null : () => pm.startRecording(context.read<WordListModel>()),
           ),
           const SizedBox(height: 16),
         ],
