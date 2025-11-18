@@ -1,8 +1,3 @@
-// FILE: lib/models/practice_model.dart
-// PURPOSE: Tracks current target, mic state, and last PracticeResult.
-// TOOLS: ChangeNotifier.
-// RELATIONSHIPS: Written by practice_screen.dart; read by feedback_screen.dart; later orchestrates AudioService -> STTService -> ScoringService and persists via attempts_repository.dart.
-
 import 'package:flutter/foundation.dart';
 import '../services/speech_service.dart';
 import '../services/scoring_service.dart';
@@ -39,6 +34,18 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Auto-initialize target from the selected list
+  void initFromWordListModel(WordListModel wordListModel) {
+    if (_target == null && wordListModel.selectedList != null) {
+      final words = wordListModel.wordsInSelected;
+      if (words.isNotEmpty) {
+        _target = words.first;
+        _last = null;
+        notifyListeners();
+      }
+    }
+  }
+
   Future<void> startRecording() async {
     if (_isRecording || _target == null) return;
 
@@ -46,9 +53,7 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Stop any previous listening just in case
       await _speech.stop();
-
       final transcript = await _speech.recordOnce(timeoutSeconds: 7);
 
       if (transcript == null || transcript.trim().isEmpty) {
@@ -56,7 +61,6 @@ class PracticeModel extends ChangeNotifier {
       } else {
         final score = ScoringService.computeScore(transcript, _target!.word);
         final correct = score > 80;
-
         _last = PracticeResult(
           transcript: transcript,
           score: score,
@@ -64,7 +68,6 @@ class PracticeModel extends ChangeNotifier {
         );
       }
     } catch (e) {
-      // Safety fallback in case of errors
       _last = PracticeResult(transcript: '', score: 0, correct: false);
     } finally {
       _isRecording = false;

@@ -1,7 +1,3 @@
-// FILE: lib/screens/practice_screen.dart
-// PURPOSE: Conducts a pronunciation practice session with card mode and speech mode.
-// RELATIONSHIPS: Reads from PracticeModel and WordListModel.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
@@ -18,11 +14,9 @@ class PracticeScreen extends StatefulWidget {
   State<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends State<PracticeScreen>
-    with SingleTickerProviderStateMixin {
+class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProviderStateMixin {
   final FlutterTts _tts = FlutterTts();
-  bool _hasSpokenSentence =
-      false; // ✅ prevents repeating sentence automatically
+  bool _hasSpokenSentence = false;
 
   @override
   void dispose() {
@@ -40,25 +34,24 @@ class _PracticeScreenState extends State<PracticeScreen>
   Widget build(BuildContext context) {
     final pm = context.watch<PracticeModel>();
     final wm = context.watch<WordListModel>();
+
+    // Auto-select first word from Dolch
+    pm.initFromWordListModel(wm);
+
     final target = pm.target;
     final currentCard = wm.currentCard;
 
-    // Start in card mode by default if no mode has been set
     if (!pm.isCardMode && target == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         pm.setCardMode(true);
       });
     }
 
-    // ✅ If the word is correct and we haven't spoken the sentence yet, do it once
-    if (pm.lastResult?.correct == true &&
-        !_hasSpokenSentence &&
-        target != null) {
+    if (pm.lastResult?.correct == true && !_hasSpokenSentence && target != null) {
       _hasSpokenSentence = true;
       _speak(target.sentence);
     }
 
-    // Reset speaker trigger when new word starts
     if (pm.lastResult == null && _hasSpokenSentence) {
       _hasSpokenSentence = false;
     }
@@ -72,8 +65,7 @@ class _PracticeScreenState extends State<PracticeScreen>
             onPressed: () {
               pm.toggleMode();
             },
-            tooltip:
-                pm.isCardMode ? 'Switch to Speech Mode' : 'Switch to Card Mode',
+            tooltip: pm.isCardMode ? 'Switch to Speech Mode' : 'Switch to Card Mode',
           ),
         ],
       ),
@@ -83,19 +75,14 @@ class _PracticeScreenState extends State<PracticeScreen>
             _buildCardMode(context, wm, currentCard)
           else
             _buildSpeechMode(context, pm, target),
-          if (!pm.isCardMode)
-            ConfettiOverlay(trigger: pm.lastResult?.correct == true),
+          if (!pm.isCardMode) ConfettiOverlay(trigger: pm.lastResult?.correct == true),
         ],
       ),
     );
   }
 
-  Widget _buildCardMode(
-      BuildContext context, WordListModel wm, WordItem? currentCard) {
-    if (currentCard == null) {
-      return const Center(child: Text('Loading cards...'));
-    }
-
+  Widget _buildCardMode(BuildContext context, WordListModel wm, WordItem? currentCard) {
+    if (currentCard == null) return const Center(child: Text('Loading cards...'));
     return Column(
       children: [
         Expanded(
@@ -134,12 +121,8 @@ class _PracticeScreenState extends State<PracticeScreen>
     );
   }
 
-  Widget _buildSpeechMode(
-      BuildContext context, PracticeModel pm, WordItem? target) {
-    if (target == null) {
-      return const Center(child: Text('Pick a word from Lists'));
-    }
-
+  Widget _buildSpeechMode(BuildContext context, PracticeModel pm, WordItem? target) {
+    if (target == null) return const Center(child: Text('Pick a word from Lists'));
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -224,8 +207,10 @@ class _FeedbackBar extends StatelessWidget {
     final emoji = result.correct ? '🎉' : '😕';
     return Column(
       children: [
-        Text('$emoji  ${result.correct ? "Great job!" : "Try again!"}',
-            style: const TextStyle(fontSize: 20)),
+        Text(
+          '$emoji ${result.correct ? "Great job!" : "Try again!"}',
+          style: const TextStyle(fontSize: 20),
+        ),
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: result.score / 100,
@@ -234,7 +219,7 @@ class _FeedbackBar extends StatelessWidget {
           minHeight: 10,
         ),
         const SizedBox(height: 4),
-        Text('Score: ${result.score}  |  Heard: "${result.transcript}"'),
+        Text('Score: ${result.score} | Heard: "${result.transcript}"'),
       ],
     );
   }
