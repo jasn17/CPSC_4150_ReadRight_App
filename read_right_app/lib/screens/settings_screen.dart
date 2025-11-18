@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/settings_model.dart';
 import '../models/auth_model.dart';
+import 'export_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -44,9 +45,21 @@ class SettingsScreen extends StatelessWidget {
                 max: 100,
                 divisions: 10,
                 label: '${s.threshold}',
-                onChanged: (v) => context.read<SettingsModel>().threshold = v.round(),
+                onChanged: (v) =>
+                    context.read<SettingsModel>().threshold = v.round(),
               ),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('Export Practice Data'),
+            subtitle: const Text('Download CSV or JSON'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ExportScreen()),
+              );
+            },
           ),
           SwitchListTile(
             title: const Text('Retain Audio (placeholder)'),

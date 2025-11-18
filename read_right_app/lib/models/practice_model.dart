@@ -1,12 +1,11 @@
-// FILE: lib/models/practice_model.dart
-// PURPOSE: Tracks current target, mic state, and last PracticeResult.
-// TOOLS: ChangeNotifier.
-// RELATIONSHIPS: Written by practice_screen.dart; read by feedback_screen.dart; later orchestrates AudioService -> STTService -> ScoringService and persists via attempts_repository.dart.
-
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/speech_service.dart';
 import '../services/scoring_service.dart';
-import 'word_list_model.dart';
+import '../services/sync_service.dart';
+import '../models/word_list_model.dart';
+import '../models/practice_attempt.dart';
+import 'package:uuid/uuid.dart';
 
 class PracticeResult {
   final String transcript;
@@ -25,6 +24,7 @@ class PracticeModel extends ChangeNotifier {
   PracticeResult? _last;
   bool _isRecording = false;
   bool _isCardMode = false;
+  String? _userId; // Current user ID
 
   WordItem? get target => _target;
   PracticeResult? get lastResult => _last;
@@ -32,54 +32,35 @@ class PracticeModel extends ChangeNotifier {
   bool get isCardMode => _isCardMode;
 
   final SpeechService _speech = SpeechService();
+  final SyncService _syncService;
+  final Uuid _uuid = const Uuid();
 
+  Map<String, Set<String>> masteredWordsByList = {}; // list -> set of mastered words
+  int currentWordIndex = 0;
+
+  // Constructor now requires SyncService
+  PracticeModel(this._syncService);
+
+  /// Set the current user ID
+  void setUserId(String userId) {
+    _userId = userId;
+  }
+
+  /// Public setter for target
   void setTarget(WordItem item) {
     _target = item;
     _last = null;
     notifyListeners();
   }
 
-  Future<void> startRecording() async {
-    if (_isRecording || _target == null) return;
-
-    _isRecording = true;
-    notifyListeners();
-
-    try {
-      // Stop any previous listening just in case
-      await _speech.stop();
-
-      final transcript = await _speech.recordOnce(timeoutSeconds: 7);
-
-      if (transcript == null || transcript.trim().isEmpty) {
-        _last = PracticeResult(transcript: '', score: 0, correct: false);
-      } else {
-        final score = ScoringService.computeScore(transcript, _target!.word);
-        final correct = score > 80;
-
-        _last = PracticeResult(
-          transcript: transcript,
-          score: score,
-          correct: correct,
-        );
-      }
-    } catch (e) {
-      // Safety fallback in case of errors
-      _last = PracticeResult(transcript: '', score: 0, correct: false);
-    } finally {
-      _isRecording = false;
-      notifyListeners();
-    }
-  }
-
-  void stopRecording() async {
-    await _speech.stop();
-    _isRecording = false;
-    notifyListeners();
-  }
-
+  /// Reset last result
   void reset() {
     _last = null;
+    notifyListeners();
+  }
+
+  void setCardMode(bool cardMode) {
+    _isCardMode = cardMode;
     notifyListeners();
   }
 
@@ -88,8 +69,108 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCardMode(bool cardMode) {
-    _isCardMode = cardMode;
+  /// Speak a word using TTS
+  Future<void> speakWord(String word) async {
+    await _speech.speak(word);
+  }
+
+  /// Initialize from WordListModel and persisted data
+  Future<void> init(WordListModel wordListModel, String userId) async {
+    _userId = userId;
+    final prefs = await SharedPreferences.getInstance();
+    masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] =
+        prefs.getStringList('mastered_${wordListModel.selectedList}')?.toSet() ?? {};
+
+    _advanceToNextWord(wordListModel);
+  }
+
+  void _advanceToNextWord(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+    final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
+
+    for (int i = currentWordIndex; i < words.length; i++) {
+      if (!mastered.contains(words[i].word)) {
+        _target = words[i];
+        currentWordIndex = i;
+        _last = null;
+        notifyListeners();
+        return;
+      }
+    }
+
+    // All mastered: stay at last word
+    if (words.isNotEmpty) _target = words.last;
     notifyListeners();
   }
+
+  /// Handle answer after recording
+  Future<void> handleAnswer(String transcript, WordListModel wordListModel) async {
+    if (_target == null || _userId == null) return;
+
+    final score = ScoringService.computeScore(transcript, _target!.word);
+    final correct = score > 80;
+
+    _last = PracticeResult(transcript: transcript, score: score, correct: correct);
+
+    // Create practice attempt record
+    final attempt = PracticeAttempt(
+      id: _uuid.v4(),
+      userId: _userId!,
+      wordList: wordListModel.selectedList ?? 'Dolch',
+      targetWord: _target!.word,
+      transcript: transcript,
+      score: score,
+      correct: correct,
+      timestamp: DateTime.now(),
+      synced: false,
+    );
+
+    // Save to local DB and queue for sync
+    await _syncService.saveAttempt(attempt);
+
+    // Mark mastered if correct
+    if (correct) {
+      final list = wordListModel.selectedList!;
+      masteredWordsByList[list] ??= {};
+      masteredWordsByList[list]!.add(_target!.word);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('mastered_$list', masteredWordsByList[list]!.toList());
+    }
+
+    notifyListeners();
+
+    // Speak word + sentence
+    await _speech.speak(_target!.word);
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _speech.speak(_target!.sentence);
+
+    // Auto-advance to next word after 4 seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      currentWordIndex++;
+      _advanceToNextWord(wordListModel);
+    });
+  }
+
+  Future<void> startRecording(WordListModel wordListModel) async {
+    if (_isRecording || _target == null) return;
+
+    _isRecording = true;
+    notifyListeners();
+
+    try {
+      await _speech.stopListening();
+      final transcript = await _speech.recordOnce(timeoutSeconds: 5);
+
+      await handleAnswer(transcript ?? '', wordListModel);
+    } catch (e) {
+      await handleAnswer('', wordListModel);
+    } finally {
+      _isRecording = false;
+      notifyListeners();
+    }
+  }
+
+  /// Count how many words mastered in the current list
+  int masteredCount(String list) => masteredWordsByList[list]?.length ?? 0;
 }
