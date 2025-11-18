@@ -29,6 +29,10 @@ class PracticeModel extends ChangeNotifier {
 
   final SpeechService _speech = SpeechService();
 
+  Future<void> speakWord(String word) async {
+    await _speech.speak(word);
+  }
+
   Map<String, Set<String>> masteredWordsByList =
       {}; // list -> set of mastered words
   int currentWordIndex = 0;
