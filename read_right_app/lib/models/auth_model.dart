@@ -22,6 +22,7 @@ class AuthModel extends ChangeNotifier {
   String? get uid => _uid;
   String? get email => _email;
   UserRole get role => _role;
+  AuthService get authService => _authService;
 
   /// Sign in using email/password through Firebase Auth and load role from Realtime Database
   Future<void> signInWithEmailPassword({

@@ -38,6 +38,12 @@
           ".validate": "newData.isNumber()"
         }
       }
+    },
+    "teacherClasses": {
+      "$teacherUid": {
+        ".read": "auth != null && auth.uid == $teacherUid",
+        ".write": "auth != null && auth.uid == $teacherUid"
+      }
     }
   }
 }

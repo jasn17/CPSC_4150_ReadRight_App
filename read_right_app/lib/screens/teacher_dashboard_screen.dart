@@ -6,7 +6,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/auth_model.dart';
-import '../services/auth_service.dart';
 
 class TeacherDashboardScreen extends StatelessWidget {
   const TeacherDashboardScreen({super.key});
@@ -14,6 +13,7 @@ class TeacherDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthModel>();
+    final authService = auth.authService;
     return Scaffold(
       appBar: AppBar(title: const Text('Teacher Dashboard')),
       body: Padding(
@@ -31,7 +31,7 @@ class TeacherDashboardScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Expanded(
               child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: AuthService().getClassesForTeacher(auth.uid ?? ''),
+                future: authService.getClassesForTeacher(auth.uid ?? ''),
                 builder: (context, snap) {
                   if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
                   if (snap.hasError) return Text('Error: ${snap.error}');
@@ -41,7 +41,7 @@ class TeacherDashboardScreen extends StatelessWidget {
                   final cls = classes.first;
                   final students = (cls['students'] as List?)?.map((e) => e.toString()).toList() ?? [];
                   return FutureBuilder<List<Map<String, dynamic>>>(
-                    future: AuthService().getUserProfilesByUids(students),
+                    future: authService.getUserProfilesByUids(students),
                     builder: (c2, s2) {
                       if (s2.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
                       if (s2.hasError) return Text('Error: ${s2.error}');
