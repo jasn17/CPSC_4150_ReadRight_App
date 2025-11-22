@@ -103,11 +103,37 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Handle answer after recording
-  Future<void> handleAnswer(String transcript, WordListModel wordListModel) async {
+  /// Handle answer after recording, with optional cloud pronunciation assessment
+  /// 
+  /// If audioBytes provided, tries Azure cloud assessment first
+  /// Falls back to local Levenshtein if cloud unavailable
+  Future<void> handleAnswer(
+    String transcript,
+    WordListModel wordListModel, {
+    List<int>? audioBytes,
+  }) async {
     if (_target == null || _userId == null) return;
 
-    final score = ScoringService.computeScore(transcript, _target!.word);
+    int score;
+
+    // If we have audio bytes, try cloud assessment
+    if (audioBytes != null && audioBytes.isNotEmpty) {
+      final cloudAssessment = await ScoringService.assessWithCloudFallback(
+        audioBytes: audioBytes,
+        targetWord: _target!.word,
+        userId: _userId,
+      );
+      score = cloudAssessment.score;
+
+      // If cloud unavailable (score == 0), fall back to local transcript scoring
+      if (score == 0 && transcript.isNotEmpty) {
+        score = ScoringService.computeScore(transcript, _target!.word);
+      }
+    } else {
+      // No audio bytes - use local transcript scoring only
+      score = ScoringService.computeScore(transcript, _target!.word);
+    }
+
     final correct = score > 80;
 
     _last = PracticeResult(transcript: transcript, score: score, correct: correct);
@@ -160,9 +186,14 @@ class PracticeModel extends ChangeNotifier {
 
     try {
       await _speech.stopListening();
-      final transcript = await _speech.recordOnce(timeoutSeconds: 5);
-
-      await handleAnswer(transcript ?? '', wordListModel);
+      final result = await _speech.recordOnce(timeoutSeconds: 5);
+      
+      // Pass both transcript and audio bytes if available
+      await handleAnswer(
+        result?.text ?? '',
+        wordListModel,
+        audioBytes: result?.audioBytes,
+      );
     } catch (e) {
       await handleAnswer('', wordListModel);
     } finally {
