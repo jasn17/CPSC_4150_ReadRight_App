@@ -24,6 +24,7 @@ dependencies:
   share_plus: ^10.1.2
   record: ^5.1.0
   http: ^1.1.0
+  flutter_dotenv: ^6.0.0
 
 flutter:
   uses-material-design: true
