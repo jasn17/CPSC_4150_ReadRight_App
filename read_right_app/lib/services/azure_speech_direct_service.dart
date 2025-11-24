@@ -239,3 +239,23 @@ class AzureSpeechDirectService {
       );
     }).toList();
   }
+
+  /// Parse syllable-level details (en-US only)
+  /// This function extracts each syllable's accuracy score 
+  List<SyllableAssessment>? _parseSyllables(List? syllablesJson) {
+    if (syllablesJson == null || syllablesJson.isEmpty) return null;
+
+    return syllablesJson.map((syllableJson) {
+      final syllable = syllableJson as Map<String, dynamic>;
+      final assessment =
+          syllable['PronunciationAssessment'] as Map<String, dynamic>?;
+
+      return SyllableAssessment(
+        syllable: syllable['Syllable'] as String? ?? '',
+        accuracyScore:
+            (assessment?['AccuracyScore'] as num?)?.toDouble() ?? 0.0,
+        offset: syllable['Offset'] as int? ?? 0,
+        duration: syllable['Duration'] as int? ?? 0,
+      );
+    }).toList();
+  }

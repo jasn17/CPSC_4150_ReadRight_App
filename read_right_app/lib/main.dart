@@ -14,9 +14,11 @@ import 'models/settings_model.dart';
 import 'services/sync_service.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
+  await dotenv.load(fileName: '.env');
+
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
