@@ -406,3 +406,94 @@ class WordAssessment {
         'phonemes': phonemes?.map((p) => p.toJson()).toList(),
       };
 }
+
+/// Syllable-level assessmen
+class SyllableAssessment {
+  final String syllable;
+  final double accuracyScore;
+  final int offset;
+  final int duration;
+
+  SyllableAssessment({
+    required this.syllable,
+    required this.accuracyScore,
+    required this.offset,
+    required this.duration,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'syllable': syllable,
+        'accuracyScore': accuracyScore,
+        'offset': offset,
+        'duration': duration,
+      };
+}
+
+/// Phoneme-level assessment with alternative candidates
+class PhonemeAssessment {
+  final String phoneme;
+  final double accuracyScore;
+
+  /// Alternative phonemes the student might have said
+  final List<PhonemeCandidate> nBestPhonemes;
+
+  final int offset;
+  final int duration;
+
+  PhonemeAssessment({
+    required this.phoneme,
+    required this.accuracyScore,
+    required this.nBestPhonemes,
+    required this.offset,
+    required this.duration,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'phoneme': phoneme,
+        'accuracyScore': accuracyScore,
+        'nBestPhonemes': nBestPhonemes.map((n) => n.toJson()).toList(),
+        'offset': offset,
+        'duration': duration,
+      };
+}
+
+/// Alternative phoneme candidate with confidence score
+class PhonemeCandidate {
+  final String phoneme;
+  final double score;
+
+  PhonemeCandidate({
+    required this.phoneme,
+    required this.score,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'phoneme': phoneme,
+        'score': score,
+      };
+}
+
+// Optional exceptions for better error handling
+class AzureAuthException implements Exception {
+  final String message;
+  AzureAuthException(this.message);
+
+  @override
+  String toString() => 'AzureAuthException: $message';
+}
+
+class AzureRateLimitException implements Exception {
+  final String message;
+  AzureRateLimitException(this.message);
+
+  @override
+  String toString() => 'AzureRateLimitException: $message';
+}
+
+class TimeoutException implements Exception {
+  final String message;
+  TimeoutException(this.message);
+
+  @override
+  String toString() => 'TimeoutException: $message';
+}
