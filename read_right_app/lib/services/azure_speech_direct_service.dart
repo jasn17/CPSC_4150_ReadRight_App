@@ -241,7 +241,7 @@ class AzureSpeechDirectService {
   }
 
   /// Parse syllable-level details (en-US only)
-  /// This function extracts each syllable's accuracy score 
+  /// This function extracts each syllable's accuracy score
   List<SyllableAssessment>? _parseSyllables(List? syllablesJson) {
     if (syllablesJson == null || syllablesJson.isEmpty) return null;
 
@@ -291,3 +291,28 @@ class AzureSpeechDirectService {
       );
     }).toList();
   }
+
+  /// Check if Azure Speech API is reachable (communication between client and Azure is stable)
+  /// Note: Azure doesn't have a dedicated health endpoint,
+  /// so we check if the API responds to requests
+  Future<bool> isAzureAvailable() async {
+    if (!AzureConfig.isConfigured) return false;
+
+    try {
+      // Simple connectivity check - just ping the endpoint
+      final uri = Uri.parse(AzureConfig.endpoint);
+      final response =
+          await _httpClient.get(uri).timeout(const Duration(seconds: 5));
+
+      // Any response means Azure is reachable (even 404 is fine)
+      return response.statusCode < 500;
+    } catch (e) {
+      print('[Azure] Availability check failed: $e');
+      return false;
+    }
+  }
+
+  void dispose() {
+    _httpClient.close();
+  }
+}
