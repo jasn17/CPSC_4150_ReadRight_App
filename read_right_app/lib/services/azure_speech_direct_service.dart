@@ -259,3 +259,35 @@ class AzureSpeechDirectService {
       );
     }).toList();
   }
+
+  /// Parse phoneme-level details with alternative candidates
+  /// This function extracts each phoneme's accuracy and NBest alternatives
+  List<PhonemeAssessment>? _parsePhonemes(List? phonemesJson) {
+    if (phonemesJson == null || phonemesJson.isEmpty) return null;
+
+    return phonemesJson.map((phonemeJson) {
+      final phoneme = phonemeJson as Map<String, dynamic>;
+      final assessment =
+          phoneme['PronunciationAssessment'] as Map<String, dynamic>?;
+
+      // Parse alternative phoneme candidates (what else it could be)
+      final nBestJson = assessment?['NBestPhonemes'] as List?;
+      final nBest = nBestJson?.map((candidate) {
+            final c = candidate as Map<String, dynamic>;
+            return PhonemeCandidate(
+              phoneme: c['Phoneme'] as String? ?? '',
+              score: (c['Score'] as num?)?.toDouble() ?? 0.0,
+            );
+          }).toList() ??
+          [];
+
+      return PhonemeAssessment(
+        phoneme: phoneme['Phoneme'] as String? ?? '',
+        accuracyScore:
+            (assessment?['AccuracyScore'] as num?)?.toDouble() ?? 0.0,
+        nBestPhonemes: nBest,
+        offset: phoneme['Offset'] as int? ?? 0,
+        duration: phoneme['Duration'] as int? ?? 0,
+      );
+    }).toList();
+  }
