@@ -3,7 +3,7 @@
     "users": {
       "$uid": {
         ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'teacher')",
-        ".write": "auth != null && ((!data.exists() && auth.uid == $uid) || (auth.uid == $uid && !newData.child('role').exists()))",
+        ".write": "auth != null && ((!data.exists() && auth.uid == $uid) || (auth.uid == $uid && !newData.child('role').exists()) || (!data.exists() && root.child('users').child(auth.uid).child('role').val() == 'teacher' && newData.child('role').val() == 'student'))",
         ".validate": "newData.hasChildren(['email', 'username', 'role', 'uid'])",
         "email": {
           ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$/)"
