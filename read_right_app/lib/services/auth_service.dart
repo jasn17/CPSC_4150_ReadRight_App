@@ -138,4 +138,76 @@ class AuthService {
     }
     return profiles;
   }
+
+  // Create a new class for a teacher
+  Future<String> createClass({
+    required String teacherUid,
+    required String className,
+  }) async {
+    try {
+      final classRef = _database.child('classes').push();
+      final classId = classRef.key!;
+      await classRef.set({
+        'id': classId,
+        'name': className,
+        'teacherUid': teacherUid,
+        'students': [],
+        'createdAt': ServerValue.timestamp,
+      });
+      // Update teacher's class index
+      await _database.child('teacherClasses').child(teacherUid).child(classId).set(true);
+      return classId;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Create a new student account (Firebase Auth + /users profile) and add to a class
+  Future<String> createStudent({
+    required String email,
+    required String username,
+    required String classId,
+    required String teacherEmail,
+    required String teacherPassword,
+  }) async {
+    try {
+      const defaultPassword = 'firstpassword';
+      
+      // Create Firebase Auth account for student (this signs in as the student)
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: defaultPassword,
+      );
+      final uid = userCredential.user!.uid;
+
+      // Create user profile in /users while signed in as student
+      await _database.child('users').child(uid).set({
+        'uid': uid,
+        'email': email,
+        'username': username,
+        'role': 'student',
+        'createdAt': ServerValue.timestamp,
+      });
+
+      // Sign out the student
+      await _auth.signOut();
+
+      // Re-authenticate as teacher
+      await _auth.signInWithEmailAndPassword(
+        email: teacherEmail,
+        password: teacherPassword,
+      );
+
+      // Add student to class (now authenticated as teacher)
+      final classRef = _database.child('classes').child(classId);
+      final classSnap = await classRef.child('students').once();
+      final studentsList = (classSnap.snapshot.value as List?)?.map((e) => e.toString()).toList() ?? [];
+      studentsList.add(uid);
+      await classRef.child('students').set(studentsList);
+
+      return uid;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
