@@ -377,3 +377,32 @@ class PronunciationAssessmentResult {
       '(Accuracy: $accuracyScore, Fluency: $fluencyScore, '
       'Completeness: $completenessScore, Prosody: $prosodyScore)';
 }
+
+/// Word-level pronunciation assessment
+class WordAssessment {
+  final String word;
+  final double accuracyScore;
+
+  /// Error types None, Mispronunciation, Omission, Insertion
+  final String errorType;
+
+  final List<SyllableAssessment>? syllables;
+  final List<PhonemeAssessment>? phonemes;
+
+  WordAssessment({
+    required this.word,
+    required this.accuracyScore,
+    required this.errorType,
+    this.syllables,
+    this.phonemes,
+  });
+
+  // Convert to JSON for storage
+  Map<String, dynamic> toJson() => {
+        'word': word,
+        'accuracyScore': accuracyScore,
+        'errorType': errorType,
+        'syllables': syllables?.map((s) => s.toJson()).toList(),
+        'phonemes': phonemes?.map((p) => p.toJson()).toList(),
+      };
+}
