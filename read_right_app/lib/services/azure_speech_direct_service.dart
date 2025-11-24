@@ -292,7 +292,7 @@ class AzureSpeechDirectService {
     }).toList();
   }
 
-  /// Check if Azure Speech API is reachable (communication between client and Azure is stable)
+  /// Check if Azure Speech API is reachable (communcation between client and Azure is stable)
   /// Note: Azure doesn't have a dedicated health endpoint,
   /// so we check if the API responds to requests
   Future<bool> isAzureAvailable() async {
@@ -315,4 +315,65 @@ class AzureSpeechDirectService {
   void dispose() {
     _httpClient.close();
   }
+}
+
+/// Complete pronunciation assessment result from Azure
+class PronunciationAssessmentResult {
+  /// Accuracy of pronunciation (0-100)
+  final double accuracyScore;
+
+  /// How smooth and natural the speech was (0-100)
+  final double fluencyScore;
+
+  /// Percentage of reference text that was spoken (0-100)
+  final double completenessScore;
+
+  /// How natural the stress/intonation was (0-100, en-US only)
+  final double prosodyScore;
+
+  /// Overall weighted score (0-100)
+  final double pronunciationScore;
+
+  /// What Azure recognized (what the student actually said with Azure recognizing)
+  final String recognizedText;
+
+  /// Word-by-word breakdown
+  final List<WordAssessment> words;
+
+  /// Raw JSON from Azure (for debugging/logging)
+  final Map<String, dynamic>? rawResponse;
+
+  PronunciationAssessmentResult({
+    required this.accuracyScore,
+    required this.fluencyScore,
+    required this.completenessScore,
+    required this.prosodyScore,
+    required this.pronunciationScore,
+    required this.recognizedText,
+    required this.words,
+    this.rawResponse,
+  });
+
+  /// Convert to simple 0-100 integer score (compatible with existing code)
+  int get simpleScore => pronunciationScore.toInt();
+
+  /// Pass/fail threshold (80% is standard for pronunciation)
+  bool get isPassed => pronunciationScore >= 80;
+
+  /// Convert to JSON for storage in Firebase/SQLite
+  Map<String, dynamic> toJson() => {
+        'accuracyScore': accuracyScore,
+        'fluencyScore': fluencyScore,
+        'completenessScore': completenessScore,
+        'prosodyScore': prosodyScore,
+        'pronunciationScore': pronunciationScore,
+        'recognizedText': recognizedText,
+        'words': words.map((w) => w.toJson()).toList(),
+        'rawResponse': rawResponse,
+      };
+
+  @override
+  String toString() => 'PronunciationScore: $pronunciationScore '
+      '(Accuracy: $accuracyScore, Fluency: $fluencyScore, '
+      'Completeness: $completenessScore, Prosody: $prosodyScore)';
 }
