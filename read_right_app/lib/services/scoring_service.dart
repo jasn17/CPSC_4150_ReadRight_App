@@ -1,7 +1,9 @@
 // PURPOSE: Compare recognized text to target word and produce a score, with cloud Azure support and local fallback
 
+import 'dart:io';
 import 'dart:math';
-import 'azure_pronunciation_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'azure_speech_direct_service.dart';
 
 class ScoringService {
   // Map homophones / common numeral confusions to canonical words
@@ -21,12 +23,9 @@ class ScoringService {
     'oh': ['oh', 'o', '0'],
   };
 
-  // Azure pronunciation service instance
-  static final AzurePronunciationService _azureService =
-      AzurePronunciationService(
-    serverBaseUrl:
-        'http://localhost:5000', // Configure with your backend URL in main.dart
-  );
+  // Azure pronunciation service instance (direct API - no backend server!)
+  static final AzureSpeechDirectService _azureService =
+      AzureSpeechDirectService();
 
   /// Normalizes a word to its canonical form if it matches a homophone group
   static String _normalizeWord(String word) {
@@ -59,7 +58,7 @@ class ScoringService {
   ///
   /// [audioBytes] - Raw WAV audio from microphone recording
   /// [targetWord] - The word being pronounced (reference text for Azure)
-  /// [userId] - Optional user ID for server-side tracking
+  /// [userId] - Optional user ID for tracking
   ///
   /// Returns:
   /// - score (0-100): pronunciation quality score
@@ -71,13 +70,26 @@ class ScoringService {
     required String targetWord,
     String? userId,
   }) async {
+    File? tempFile;
+    
     try {
+      // Azure needs a file path, not raw bytes
+      // Write audio bytes to temporary WAV file
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      tempFile = File('${tempDir.path}/azure_assess_$timestamp.wav');
+      await tempFile.writeAsBytes(audioBytes);
+
+      print('[ScoringService] 🎤 Saved audio to ${tempFile.path} (${audioBytes.length} bytes)');
+
       // Try cloud assessment first (more accurate, phoneme-level scoring)
       final cloudScore = await _azureService.assessPronunciation(
-        audioData: audioBytes,
+        audioFilePath: tempFile.path,
         referenceText: targetWord,
         userId: userId,
       );
+
+      print('[ScoringService] ✅ Azure assessment succeeded! Score: ${cloudScore.simpleScore}');
 
       return (
         score: cloudScore.simpleScore,
@@ -85,25 +97,38 @@ class ScoringService {
         usedCloud: true,
       );
     } catch (e) {
-      print('Cloud assessment failed ($e), using local fallback');
-      // Cloud service unavailable - we cannot proceed without audio transcript
-      // In a real scenario, would run local STT on the audio first
+      print('[ScoringService] ⚠️ Cloud assessment failed: $e');
+      print('[ScoringService] 🔄 Falling back to local Levenshtein scoring...');
+      
+      // Cloud service unavailable - cannot get accurate score without transcript
+      // Return 0 to indicate assessment incomplete (calling code should use local STT)
       return (
-        score: 0, // Indicate assessment incomplete
+        score: 0, // Indicate assessment incomplete - need transcript
         details: {
           'error': 'Cloud service unavailable',
-          'exception': e.toString()
+          'exception': e.toString(),
+          'fallbackSuggestion': 'Use local STT transcript with computeScore()'
         },
         usedCloud: false,
       );
+    } finally {
+      // Clean up temp file
+      if (tempFile != null && await tempFile.exists()) {
+        try {
+          await tempFile.delete();
+          print('[ScoringService] 🗑️ Deleted temp file ${tempFile.path}');
+        } catch (e) {
+          print('[ScoringService] ⚠️ Failed to delete temp file: $e');
+        }
+      }
     }
   }
 
-  /// Check if cloud service is available before attempting assessment
+  /// Check if Azure cloud service is available before attempting assessment
   /// Useful for showing appropriate UI (cloud vs local mode)
   static Future<bool> isCloudServiceAvailable() async {
     try {
-      return await _azureService.isServerAvailable();
+      return await _azureService.isAzureAvailable();
     } catch (_) {
       return false;
     }
