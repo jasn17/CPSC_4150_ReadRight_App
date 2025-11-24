@@ -218,3 +218,24 @@ class AzureSpeechDirectService {
       throw Exception('Failed to parse Azure response: $e');
     }
   }
+
+  /// Parse word-level assessment details from Azure response
+  /// This function extracts each word's accuracy and phoneme breakdown
+  List<WordAssessment> _parseWords(List? wordsJson) {
+    if (wordsJson == null || wordsJson.isEmpty) return [];
+
+    return wordsJson.map((wordJson) {
+      final word = wordJson as Map<String, dynamic>;
+      final assessment =
+          word['PronunciationAssessment'] as Map<String, dynamic>?;
+
+      return WordAssessment(
+        word: word['Word'] as String? ?? '',
+        accuracyScore:
+            (assessment?['AccuracyScore'] as num?)?.toDouble() ?? 0.0,
+        errorType: assessment?['ErrorType'] as String? ?? 'None',
+        syllables: _parseSyllables(word['Syllables'] as List?),
+        phonemes: _parsePhonemes(word['Phonemes'] as List?),
+      );
+    }).toList();
+  }
