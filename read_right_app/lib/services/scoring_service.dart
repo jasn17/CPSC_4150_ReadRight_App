@@ -71,7 +71,7 @@ class ScoringService {
     String? userId,
   }) async {
     File? tempFile;
-    
+
     try {
       // Azure needs a file path, not raw bytes
       // Write audio bytes to temporary WAV file
@@ -80,7 +80,8 @@ class ScoringService {
       tempFile = File('${tempDir.path}/azure_assess_$timestamp.wav');
       await tempFile.writeAsBytes(audioBytes);
 
-      print('[ScoringService] 🎤 Saved audio to ${tempFile.path} (${audioBytes.length} bytes)');
+      print(
+          '[ScoringService] 🎤 Saved audio to ${tempFile.path} (${audioBytes.length} bytes)');
 
       // Try cloud assessment first (more accurate, phoneme-level scoring)
       final cloudScore = await _azureService.assessPronunciation(
@@ -89,7 +90,8 @@ class ScoringService {
         userId: userId,
       );
 
-      print('[ScoringService] ✅ Azure assessment succeeded! Score: ${cloudScore.simpleScore}');
+      print(
+          '[ScoringService] ✅ Azure assessment succeeded! Score: ${cloudScore.simpleScore}');
 
       return (
         score: cloudScore.simpleScore,
@@ -99,7 +101,7 @@ class ScoringService {
     } catch (e) {
       print('[ScoringService] ⚠️ Cloud assessment failed: $e');
       print('[ScoringService] 🔄 Falling back to local Levenshtein scoring...');
-      
+
       // Cloud service unavailable - cannot get accurate score without transcript
       // Return 0 to indicate assessment incomplete (calling code should use local STT)
       return (
