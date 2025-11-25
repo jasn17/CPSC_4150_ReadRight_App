@@ -56,6 +56,19 @@ class PracticeModel extends ChangeNotifier {
     _userId = userId;
   }
 
+  /// Clear current session and reload for new user
+  Future<void> switchUser(String newUserId, WordListModel wordListModel) async {
+    // Clear current mastered words from memory
+    masteredWordsByList.clear();
+    currentWordIndex = 0;
+    _target = null;
+    _last = null;
+    
+    // Re-initialize with new user
+    await init(wordListModel, newUserId);
+    notifyListeners();
+  }
+
   /// Public setter for target
   void setTarget(WordItem item) {
     _target = item;
@@ -88,8 +101,11 @@ class PracticeModel extends ChangeNotifier {
   Future<void> init(WordListModel wordListModel, String userId) async {
     _userId = userId;
     final prefs = await SharedPreferences.getInstance();
+    
+    // IMPORTANT: Include userId in the key so each user has separate mastered words
+    final masteredKey = 'mastered_${wordListModel.selectedList}_$userId';
     masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] =
-        prefs.getStringList('mastered_${wordListModel.selectedList}')?.toSet() ?? {};
+        prefs.getStringList(masteredKey)?.toSet() ?? {};
 
     _advanceToNextWord(wordListModel);
   }
@@ -176,7 +192,9 @@ class PracticeModel extends ChangeNotifier {
       masteredWordsByList[list]!.add(_target!.word);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('mastered_$list', masteredWordsByList[list]!.toList());
+      // IMPORTANT: Include userId in the key so each user has separate mastered words
+      final masteredKey = 'mastered_${list}_$_userId';
+      await prefs.setStringList(masteredKey, masteredWordsByList[list]!.toList());
     }
 
     notifyListeners();

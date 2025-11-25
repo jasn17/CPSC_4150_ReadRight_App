@@ -6,8 +6,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/progress_model.dart';
+import '../models/practice_model.dart';
 import '../widgets/score_badge.dart';
+import '../widgets/analytics_section.dart';
 
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
@@ -22,11 +25,19 @@ class _ProgressScreenState extends State<ProgressScreen> {
     super.initState();
     // Load data when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final model = context.read<ProgressModel>();
-      // You'll need to pass userId - you can get it from PracticeModel or AuthService
-      // For now, assuming you have access to userId
-      // model.loadAttemptsForUser(userId);
+      _loadUserProgress();
     });
+  }
+
+  Future<void> _loadUserProgress() async {
+    final model = context.read<ProgressModel>();
+    
+    // Get userId from Firebase Auth
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final userId = currentUser?.uid ?? 'guest';
+    
+    // Load attempts for this user
+    await model.loadAttemptsForUser(userId);
   }
 
   @override
@@ -57,7 +68,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => model.refresh(),
+            onPressed: () => _loadUserProgress(),
             tooltip: 'Refresh',
           ),
         ],
@@ -66,34 +77,49 @@ class _ProgressScreenState extends State<ProgressScreen> {
           ? const Center(child: CircularProgressIndicator())
           : model.attempts.isEmpty
               ? _buildEmptyState()
-              : Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildAverageSection(model),
-                    const Divider(height: 32, thickness: 2),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Recent Attempts',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '${model.attempts.length} total',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildAverageSection(model),
+                      const Divider(height: 32, thickness: 2),
+                      
+                      // Analytics Section
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: AnalyticsSection(model: model),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(child: _buildAttemptsList(model)),
-                  ],
+                      
+                      const Divider(height: 32, thickness: 2),
+                      
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Recent Attempts',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${model.attempts.length} total',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // Build attempts list without Expanded (since we're in ScrollView)
+                      _buildAttemptsListNonExpandable(model),
+                      
+                      const SizedBox(height: 16), // Bottom padding
+                    ],
+                  ),
                 ),
     );
   }
@@ -189,6 +215,71 @@ class _ProgressScreenState extends State<ProgressScreen> {
     
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 8),
+      itemCount: model.attempts.length,
+      itemBuilder: (context, index) {
+        final attempt = model.attempts[index];
+        final date = dateFormatter.format(attempt.at);
+        final time = timeFormatter.format(attempt.at);
+        
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          elevation: 2,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            leading: ScoreBadge(
+              score: attempt.score,
+              radius: 24,
+            ),
+            title: Text(
+              attempt.word,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text(
+                  date,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  time,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+            trailing: Icon(
+              attempt.correct ? Icons.check_circle : Icons.cancel,
+              color: attempt.correct ? Colors.green : Colors.red,
+              size: 28,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Non-expandable version for use inside SingleChildScrollView
+  Widget _buildAttemptsListNonExpandable(ProgressModel model) {
+    final dateFormatter = DateFormat('MMM d, y');
+    final timeFormatter = DateFormat('h:mm a');
+    
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      shrinkWrap: true, // Important: allows ListView inside ScrollView
+      physics: const NeverScrollableScrollPhysics(), // Disable inner scroll
       itemCount: model.attempts.length,
       itemBuilder: (context, index) {
         final attempt = model.attempts[index];

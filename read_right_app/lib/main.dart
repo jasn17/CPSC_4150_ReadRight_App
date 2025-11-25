@@ -52,14 +52,17 @@ Future<void> main() async {
   FirebaseAuth.instance.authStateChanges().listen((User? user) async {
     if (user != null) {
       // User logged in - update models with their userId
-      practiceModel.setUserId(user.uid);
-      await progressModel.loadAttemptsForUser(user.uid);
       debugPrint('User logged in: ${user.uid}');
+      
+      // Switch to new user and load their data
+      await practiceModel.switchUser(user.uid, wordListModel);
+      await progressModel.loadAttemptsForUser(user.uid);
     } else {
       // User logged out - switch to guest mode
-      practiceModel.setUserId('guest');
-      await progressModel.loadAttemptsForUser('guest');
       debugPrint('User logged out - using guest mode');
+      
+      await practiceModel.switchUser('guest', wordListModel);
+      await progressModel.loadAttemptsForUser('guest');
     }
   });
 

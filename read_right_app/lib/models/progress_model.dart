@@ -100,4 +100,89 @@ class ProgressModel extends ChangeNotifier {
     );
     notifyListeners();
   }
+
+  /// Get most missed words (words with lowest average scores)
+  /// Returns a list of (word, averageScore, attemptCount) sorted by worst performance
+  List<({String word, double avgScore, int attempts})> getMostMissedWords({int limit = 10}) {
+    if (_attempts.isEmpty) return [];
+
+    // Group attempts by word
+    final Map<String, List<int>> wordScores = {};
+    
+    for (final attempt in _attempts) {
+      wordScores.putIfAbsent(attempt.word, () => []);
+      wordScores[attempt.word]!.add(attempt.score);
+    }
+
+    // Calculate average score for each word
+    final wordStats = wordScores.entries.map((entry) {
+      final word = entry.key;
+      final scores = entry.value;
+      final avgScore = scores.reduce((a, b) => a + b) / scores.length;
+      
+      return (
+        word: word,
+        avgScore: avgScore,
+        attempts: scores.length,
+      );
+    }).toList();
+
+    // Sort by average score (lowest first) - these are the "most missed"
+    wordStats.sort((a, b) => a.avgScore.compareTo(b.avgScore));
+
+    // Return top N worst performing words
+    return wordStats.take(limit).toList();
+  }
+
+  /// Get words that need more practice (incorrect > 50% of the time)
+  List<({String word, double successRate, int attempts})> getWordsNeedingPractice() {
+    if (_attempts.isEmpty) return [];
+
+    // Group attempts by word
+    final Map<String, List<bool>> wordResults = {};
+    
+    for (final attempt in _attempts) {
+      wordResults.putIfAbsent(attempt.word, () => []);
+      wordResults[attempt.word]!.add(attempt.correct);
+    }
+
+    // Calculate success rate for each word
+    final wordStats = wordResults.entries.map((entry) {
+      final word = entry.key;
+      final results = entry.value;
+      final correctCount = results.where((correct) => correct).length;
+      final successRate = correctCount / results.length;
+      
+      return (
+        word: word,
+        successRate: successRate,
+        attempts: results.length,
+      );
+    }).toList();
+
+    // Filter words with success rate < 50%
+    final needsPractice = wordStats.where((stat) => stat.successRate < 0.5).toList();
+
+    // Sort by success rate (lowest first)
+    needsPractice.sort((a, b) => a.successRate.compareTo(b.successRate));
+
+    return needsPractice;
+  }
+
+  /// Get improvement trend: compare recent performance to earlier performance
+  /// Returns positive number if improving, negative if declining
+  double getImprovementTrend({int recentCount = 10}) {
+    if (_attempts.length < recentCount * 2) return 0.0;
+
+    // Split attempts into recent and older
+    final recentAttempts = _attempts.take(recentCount).toList();
+    final olderAttempts = _attempts.skip(recentCount).take(recentCount).toList();
+
+    // Calculate average scores
+    final recentAvg = recentAttempts.map((a) => a.score).reduce((a, b) => a + b) / recentCount;
+    final olderAvg = olderAttempts.map((a) => a.score).reduce((a, b) => a + b) / recentCount;
+
+    // Return difference (positive = improvement, negative = decline)
+    return recentAvg - olderAvg;
+  }
 }
