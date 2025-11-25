@@ -150,7 +150,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
             label: pm.isRecording ? 'Recording...' : 'Tap to Record',
             onPressed: pm.isRecording
                 ? null
-                : () => pm.startRecording(context.read<WordListModel>()),
+                : () {
+                    print('[PracticeScreen] record button tapped');
+                    pm.startRecording(context.read<WordListModel>());
+                  },
           ),
           const SizedBox(height: 16),
         ],

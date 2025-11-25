@@ -4,6 +4,7 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 /// Result from speech recognition
@@ -92,6 +93,7 @@ class SpeechService {
     try {
       // Check permissions
       bool hasPermission = await _audioRecorder.hasPermission();
+      print('[SpeechService] hasPermission=$hasPermission');
       if (!hasPermission) return null;
 
       // Get temp directory for audio file
@@ -101,8 +103,12 @@ class SpeechService {
 
       // Start recording to file
       _isRecording = true;
+      print('[SpeechService] start recording to $filePath');
       await _audioRecorder.start(
-        const RecordConfig(),
+        const RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+        ),
         path: filePath,
       );
 
@@ -114,6 +120,12 @@ class SpeechService {
         await _audioRecorder.stop();
         _isRecording = false;
       }
+
+      try {
+        final f = File(filePath);
+        final len = await f.length();
+        print('[SpeechService] recorded file size=$len bytes');
+      } catch (_) {}
 
       return filePath;
     } catch (e) {
@@ -155,7 +167,8 @@ class SpeechService {
     required String filePath,
     required String referenceText,
   }) async {
-    final uri = Uri.parse("http://127.0.0.1:8000/api/assess");
+    final uri = Uri.parse("http://10.0.2.2:8000/api/assess");
+    print('[SpeechService] sending assessment to $uri for "$referenceText"');
 
     final request = http.MultipartRequest('POST', uri)
       ..fields['reference_text'] = referenceText
@@ -163,6 +176,8 @@ class SpeechService {
 
     final response = await request.send();
     final respStr = await response.stream.bytesToString();
+    print(
+        '[SpeechService] assessment response status=${response.statusCode} body=$respStr');
 
     if (response.statusCode != 200) {
       print("Backend error: $respStr");

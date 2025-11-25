@@ -3,12 +3,10 @@
 // TOOLS: ChangeNotifier (Provider state), firebase_auth, firebase_database via AuthService.
 // RELATIONSHIPS: Read by app.dart and shell_screen.dart; written by login_screen.dart and settings_screen.dart.
 
-import 'package:flutter/foundation.dart';
-import '../services/auth_service.dart';
 import 'practice_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 enum UserRole { student, teacher }
 
@@ -26,8 +24,9 @@ class AuthModel extends ChangeNotifier {
   String? get uid => _uid;
   String? get email => _email;
   UserRole get role => _role;
+  AuthService get authService => _authService;
 
-/// Sign in using email/password through Firebase Auth and load role from Realtime Database
+  /// Sign in using email/password through Firebase Auth and load role from Realtime Database
   Future<void> signInWithEmailPassword({
     required String email,
     required String password,
@@ -51,19 +50,21 @@ class AuthModel extends ChangeNotifier {
     if (data == null) {
       // If there's no user profile, deny login (limits access to our test users)
       await _authService.signOut();
-      throw Exception('Account is not provisioned in ReadRight (no user profile).');
+      throw Exception(
+        'Account is not provisioned in ReadRight (no user profile).',
+      );
     }
     final roleStr = (data['role'] as String?)?.toLowerCase();
     _role = roleStr == 'teacher' ? UserRole.teacher : UserRole.student;
 
     _isLoggedIn = true;
-    
+
     // Set user ID in PracticeModel if context is provided
     if (context != null) {
       final practiceModel = Provider.of<PracticeModel>(context, listen: false);
       practiceModel.setUserId(user.uid);
     }
-    
+
     notifyListeners();
   }
 

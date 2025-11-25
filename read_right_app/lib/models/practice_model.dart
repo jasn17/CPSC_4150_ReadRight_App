@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/speech_service.dart';
-import '../services/scoring_service.dart';
 import '../services/sync_service.dart';
 import '../models/word_list_model.dart';
 import '../models/practice_attempt.dart';
@@ -88,8 +87,11 @@ class PracticeModel extends ChangeNotifier {
   }
 
   void _advanceToNextWord(WordListModel wordListModel) {
+    final listName = wordListModel.selectedList ?? 'Dolch';
+    masteredWordsByList[listName] ??= {};
+
     final words = wordListModel.wordsInSelected;
-    final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
+    final mastered = masteredWordsByList[listName]!;
 
     for (int i = currentWordIndex; i < words.length; i++) {
       if (!mastered.contains(words[i].word)) {
@@ -106,77 +108,34 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Handle answer after recording
-  Future<void> handleAnswer(
-      String transcript, WordListModel wordListModel) async {
-    if (_target == null || _userId == null) return;
-
-    _last =
-        PracticeResult(transcript: transcript, score: score, correct: correct);
-
-    // Create practice attempt record
-    final attempt = PracticeAttempt(
-      id: _uuid.v4(),
-      userId: _userId!,
-      wordList: wordListModel.selectedList ?? 'Dolch',
-      targetWord: _target!.word,
-      transcript: transcript,
-      score: score,
-      correct: correct,
-      timestamp: DateTime.now(),
-      synced: false,
-    );
-
-    // Save to local DB and queue for sync
-    await _syncService.saveAttempt(attempt);
-
-    // Mark mastered if correct
-    if (correct) {
-      final list = wordListModel.selectedList!;
-      masteredWordsByList[list] ??= {};
-      masteredWordsByList[list]!.add(_target!.word);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(
-          'mastered_$list', masteredWordsByList[list]!.toList());
-    }
-
-    notifyListeners();
-
-    // Speak word + sentence
-    await _speech.speak(_target!.word);
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _speech.speak(_target!.sentence);
-
-    // Auto-advance to next word after 4 seconds
-    Future.delayed(const Duration(seconds: 4), () {
-      currentWordIndex++;
-      _advanceToNextWord(wordListModel);
-    });
-  }
-
   Future<void> startRecording(WordListModel wordListModel) async {
     if (_isRecording || _target == null) return;
 
     _isRecording = true;
+    print('[PracticeModel] startRecording target=${_target?.word}');
     notifyListeners();
 
     try {
       // 1. Record raw audio as WAV
+      print('[PracticeModel] starting audio capture');
       final filePath = await _speech.recordAudioToFile(timeoutSeconds: 4);
 
       if (filePath == null) {
+        print('[PracticeModel] recordAudioToFile returned null');
         _last = PracticeResult(transcript: "", score: 0, correct: false);
         notifyListeners();
         return;
       }
 
+      print('[PracticeModel] audio captured at $filePath');
       // 2. Send audio to backend for pronunciation assessment
       final assessment = await _speech.sendForPronunciationAssessment(
         filePath: filePath,
         referenceText: _target!.word,
       );
 
+      print(
+          '[PracticeModel] assessment result transcript="${assessment.transcript}" score=${assessment.score} correct=${assessment.correct}');
       // 3. Update app state
       _last = PracticeResult(
         transcript: assessment.transcript,
@@ -209,11 +168,12 @@ class PracticeModel extends ChangeNotifier {
     required WordListModel wordListModel,
   }) async {
     if (_target == null || _userId == null) return;
+    final listName = wordListModel.selectedList ?? 'Dolch';
 
     final attempt = PracticeAttempt(
       id: _uuid.v4(),
       userId: _userId!,
-      wordList: wordListModel.selectedList ?? 'Dolch',
+      wordList: listName,
       targetWord: _target!.word,
       transcript: transcript,
       score: score,
@@ -225,13 +185,12 @@ class PracticeModel extends ChangeNotifier {
     await _syncService.saveAttempt(attempt);
 
     if (correct) {
-      final list = wordListModel.selectedList!;
-      masteredWordsByList[list] ??= {};
-      masteredWordsByList[list]!.add(_target!.word);
+      masteredWordsByList[listName] ??= {};
+      masteredWordsByList[listName]!.add(_target!.word);
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(
-          'mastered_$list', masteredWordsByList[list]!.toList());
+          'mastered_$listName', masteredWordsByList[listName]!.toList());
     }
 
     notifyListeners();
