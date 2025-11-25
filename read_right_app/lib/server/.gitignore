@@ -49,5 +49,4 @@ app.*.map.json
 
 read_right_app/lib/server/.env
 .env
-*.env
 *.env.*
