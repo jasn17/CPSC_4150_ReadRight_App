@@ -4,13 +4,13 @@ import 'dart:math';
 
 class CharacterWidget extends StatelessWidget {
 
-  int randomInt = Random().nextInt(3)+1;
 
-  late Image characterImage = Image.asset('assets/SourceImages/character$randomInt.png');
 
 
   @override
   Widget build(BuildContext context) {
+    int randomInt = Random().nextInt(3)+1;
+    Image characterImage = Image.asset('assets/SourceImages/character$randomInt.png');
     return Column(
       children: [
         CircleAvatar(
