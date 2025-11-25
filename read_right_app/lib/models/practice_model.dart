@@ -5,6 +5,7 @@ import '../services/scoring_service.dart';
 import '../services/sync_service.dart';
 import '../models/word_list_model.dart';
 import '../models/practice_attempt.dart';
+import '../models/progress_model.dart';
 import 'package:uuid/uuid.dart';
 
 class PracticeResult {
@@ -30,10 +31,14 @@ class PracticeModel extends ChangeNotifier {
   PracticeResult? get lastResult => _last;
   bool get isRecording => _isRecording;
   bool get isCardMode => _isCardMode;
+  String? get userId => _userId; // Expose userId getter
 
   final SpeechService _speech = SpeechService();
   final SyncService _syncService;
   final Uuid _uuid = const Uuid();
+
+  // Optional: Reference to ProgressModel for real-time updates
+  ProgressModel? _progressModel;
 
   Map<String, Set<String>> masteredWordsByList = {}; // list -> set of mastered words
   int currentWordIndex = 0;
@@ -41,9 +46,27 @@ class PracticeModel extends ChangeNotifier {
   // Constructor now requires SyncService
   PracticeModel(this._syncService);
 
+  /// Set reference to ProgressModel for real-time updates
+  void setProgressModel(ProgressModel progressModel) {
+    _progressModel = progressModel;
+  }
+
   /// Set the current user ID
   void setUserId(String userId) {
     _userId = userId;
+  }
+
+  /// Clear current session and reload for new user
+  Future<void> switchUser(String newUserId, WordListModel wordListModel) async {
+    // Clear current mastered words from memory
+    masteredWordsByList.clear();
+    currentWordIndex = 0;
+    _target = null;
+    _last = null;
+    
+    // Re-initialize with new user
+    await init(wordListModel, newUserId);
+    notifyListeners();
   }
 
   /// Public setter for target
@@ -78,8 +101,11 @@ class PracticeModel extends ChangeNotifier {
   Future<void> init(WordListModel wordListModel, String userId) async {
     _userId = userId;
     final prefs = await SharedPreferences.getInstance();
+    
+    // IMPORTANT: Include userId in the key so each user has separate mastered words
+    final masteredKey = 'mastered_${wordListModel.selectedList}_$userId';
     masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] =
-        prefs.getStringList('mastered_${wordListModel.selectedList}')?.toSet() ?? {};
+        prefs.getStringList(masteredKey)?.toSet() ?? {};
 
     _advanceToNextWord(wordListModel);
   }
@@ -154,6 +180,11 @@ class PracticeModel extends ChangeNotifier {
     // Save to local DB and queue for sync
     await _syncService.saveAttempt(attempt);
 
+    // Update ProgressModel in real-time if available
+    if (_progressModel != null) {
+      _progressModel!.add(_target!.word, score, correct);
+    }
+
     // Mark mastered if correct
     if (correct) {
       final list = wordListModel.selectedList!;
@@ -161,7 +192,9 @@ class PracticeModel extends ChangeNotifier {
       masteredWordsByList[list]!.add(_target!.word);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('mastered_$list', masteredWordsByList[list]!.toList());
+      // IMPORTANT: Include userId in the key so each user has separate mastered words
+      final masteredKey = 'mastered_${list}_$_userId';
+      await prefs.setStringList(masteredKey, masteredWordsByList[list]!.toList());
     }
 
     notifyListeners();

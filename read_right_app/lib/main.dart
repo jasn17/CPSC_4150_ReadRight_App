@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'app.dart';
 import 'models/auth_model.dart';
@@ -26,16 +27,44 @@ Future<void> main() async {
 
   // Create instances
   final wordListModel = WordListModel();
-  final syncService = SyncService(); // Create sync service
-  final practiceModel =
-      PracticeModel(syncService); // Pass sync service to practice model
+  final syncService = SyncService();
+  final practiceModel = PracticeModel(syncService);
+  final progressModel = ProgressModel();
 
   // Load word lists first
   await wordListModel.loadFromAssets();
 
-  // Initialize practice model (userId will be set after login)
-  // We'll set it to a default for now, will update after auth
-  await practiceModel.init(wordListModel, 'guest');
+  // Get current user from Firebase Auth
+  final currentUser = FirebaseAuth.instance.currentUser;
+  final userId = currentUser?.uid ?? 'guest';
+
+  // Initialize practice model with current userId
+  await practiceModel.init(wordListModel, userId);
+  practiceModel.setUserId(userId);
+
+  // Load progress for current user
+  await progressModel.loadAttemptsForUser(userId);
+
+  // Connect PracticeModel to ProgressModel for real-time updates
+  practiceModel.setProgressModel(progressModel);
+
+  // Listen for auth state changes and update models accordingly
+  FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+    if (user != null) {
+      // User logged in - update models with their userId
+      debugPrint('User logged in: ${user.uid}');
+      
+      // Switch to new user and load their data
+      await practiceModel.switchUser(user.uid, wordListModel);
+      await progressModel.loadAttemptsForUser(user.uid);
+    } else {
+      // User logged out - switch to guest mode
+      debugPrint('User logged out - using guest mode');
+      
+      await practiceModel.switchUser('guest', wordListModel);
+      await progressModel.loadAttemptsForUser('guest');
+    }
+  });
 
   runApp(MultiProvider(
     providers: [
@@ -43,14 +72,9 @@ Future<void> main() async {
           create: (_) => AuthModel(authService: AuthService())),
       ChangeNotifierProvider(create: (_) => SettingsModel()),
       ChangeNotifierProvider.value(value: wordListModel),
-
-      // Correct provider for SyncService (ChangeNotifier!)
       ChangeNotifierProvider<SyncService>.value(value: syncService),
-
-      // PracticeModel depends on SyncService
       ChangeNotifierProvider.value(value: practiceModel),
-
-      ChangeNotifierProvider(create: (_) => ProgressModel()),
+      ChangeNotifierProvider.value(value: progressModel),
     ],
     child: const ReadRightApp(),
   ));
