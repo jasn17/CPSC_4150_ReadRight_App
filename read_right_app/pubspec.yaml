@@ -1,9 +1,8 @@
 name: read_right_app
 
-version: 
-  1.0.0+1
+version: 1.0.0+1
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: ">=3.4.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -22,12 +21,14 @@ dependencies:
   connectivity_plus: ^6.1.0
   uuid: ^4.5.1
   path_provider: ^2.1.4
-  share_plus: ^10.1.2 
-  
+  share_plus: ^10.1.2
+  record: ^5.1.0
+  http: ^1.1.0
+  flutter_dotenv: ^6.0.0
 
 flutter:
   uses-material-design: true
-  assets: 
+  assets:
     - assets/seed_words.csv
     - assets/seed_words_with_sentences_complete.csv
     - assets/SourceImages/character1.png
