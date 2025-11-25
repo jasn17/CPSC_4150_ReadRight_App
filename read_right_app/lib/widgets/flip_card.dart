@@ -81,8 +81,8 @@ class _FlipCardState extends State<FlipCard>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: isShowingFront
-                      ? Colors.blue.shade50
-                      : Colors.green.shade50,
+                      ? Theme.of(context).colorScheme.inversePrimary
+                      : Theme.of(context).colorScheme.secondary,
                 ),
                 child: isShowingFront ? _buildFrontSide() : _buildBackSide(),
               ),

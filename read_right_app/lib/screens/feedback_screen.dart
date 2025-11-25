@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../models/practice_model.dart';
 import '../widgets/score_badge.dart';
 import '../widgets/primary_button.dart';
+import '/widgets/character_widget.dart';
 
 class FeedbackScreen extends StatelessWidget {
   const FeedbackScreen({super.key});
@@ -25,6 +26,8 @@ class FeedbackScreen extends StatelessWidget {
               : Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              CharacterWidget(),
+              const SizedBox(height: 24),
               ScoreBadge(score: last.score),
               const SizedBox(height: 16),
               Text(last.correct ? '✅ Correct' : '❌ Try Again', style: const TextStyle(fontSize: 20)),

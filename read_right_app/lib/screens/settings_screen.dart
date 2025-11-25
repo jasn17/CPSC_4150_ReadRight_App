@@ -50,17 +50,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.download),
-            title: const Text('Export Practice Data'),
-            subtitle: const Text('Download CSV or JSON'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ExportScreen()),
-              );
-            },
-          ),
+
           SwitchListTile(
             title: const Text('Retain Audio (placeholder)'),
             value: s.retainAudio,

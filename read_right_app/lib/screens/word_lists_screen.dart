@@ -48,12 +48,20 @@ class WordListsScreen extends StatelessWidget {
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     title: Text(w.word),
                     subtitle: Text(w.sentence),
                     trailing: isMastered
                         ? const Icon(Icons.check_circle, color: Colors.green)
                         : null,
                     onTap: () => context.read<PracticeModel>().setTarget(w),
+                    textColor: Theme.of(context).colorScheme.surface.computeLuminance() >= .5
+                                ? Theme.of(context).colorScheme.inverseSurface
+                                : Theme.of(context).colorScheme.surface,
+                    tileColor: Theme.of(context).colorScheme.inversePrimary,
+                    splashColor: Theme.of(context).colorScheme.secondary,
                   ),
                 );
               },

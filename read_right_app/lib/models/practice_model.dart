@@ -171,8 +171,8 @@ class PracticeModel extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 500));
     await _speech.speak(_target!.sentence);
 
-    // Auto-advance to next word after 4 seconds
-    Future.delayed(const Duration(seconds: 4), () {
+    // Auto-advance to next word after 10 seconds
+    Future.delayed(const Duration(seconds: 10), () {
       currentWordIndex++;
       _advanceToNextWord(wordListModel);
     });

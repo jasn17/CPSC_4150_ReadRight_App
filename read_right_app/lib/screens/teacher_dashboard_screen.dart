@@ -6,6 +6,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/auth_model.dart';
+import '../services/auth_service.dart';
+import 'export_screen.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -181,6 +183,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               subtitle: Text('Coming soon…'),
             ),
             const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
             const Text('Your classes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Expanded(
@@ -240,6 +244,18 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   );
                 },
               ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.download),
+              title: const Text('Export Practice Data'),
+              subtitle: const Text('Download CSV or JSON'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ExportScreen()),
+                );
+              },
             ),
           ],
         ),

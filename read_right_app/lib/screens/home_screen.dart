@@ -176,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solo 4 — Local Data'),
+        title: const Text('ReadRight'),
         actions: [
           IconButton(
             tooltip: 'Refresh',
