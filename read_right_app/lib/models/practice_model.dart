@@ -35,7 +35,8 @@ class PracticeModel extends ChangeNotifier {
   final SyncService _syncService;
   final Uuid _uuid = const Uuid();
 
-  Map<String, Set<String>> masteredWordsByList = {}; // list -> set of mastered words
+  Map<String, Set<String>> masteredWordsByList =
+      {}; // list -> set of mastered words
   int currentWordIndex = 0;
 
   // Constructor now requires SyncService
@@ -78,8 +79,10 @@ class PracticeModel extends ChangeNotifier {
   Future<void> init(WordListModel wordListModel, String userId) async {
     _userId = userId;
     final prefs = await SharedPreferences.getInstance();
-    masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] =
-        prefs.getStringList('mastered_${wordListModel.selectedList}')?.toSet() ?? {};
+    masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] = prefs
+            .getStringList('mastered_${wordListModel.selectedList}')
+            ?.toSet() ??
+        {};
 
     _advanceToNextWord(wordListModel);
   }
@@ -104,13 +107,12 @@ class PracticeModel extends ChangeNotifier {
   }
 
   /// Handle answer after recording
-  Future<void> handleAnswer(String transcript, WordListModel wordListModel) async {
+  Future<void> handleAnswer(
+      String transcript, WordListModel wordListModel) async {
     if (_target == null || _userId == null) return;
 
-    final score = ScoringService.computeScore(transcript, _target!.word);
-    final correct = score > 80;
-
-    _last = PracticeResult(transcript: transcript, score: score, correct: correct);
+    _last =
+        PracticeResult(transcript: transcript, score: score, correct: correct);
 
     // Create practice attempt record
     final attempt = PracticeAttempt(
@@ -135,7 +137,8 @@ class PracticeModel extends ChangeNotifier {
       masteredWordsByList[list]!.add(_target!.word);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('mastered_$list', masteredWordsByList[list]!.toList());
+      await prefs.setStringList(
+          'mastered_$list', masteredWordsByList[list]!.toList());
     }
 
     notifyListeners();
@@ -159,12 +162,37 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _speech.stopListening();
-      final transcript = await _speech.recordOnce(timeoutSeconds: 5);
+      // 1. Record raw audio as WAV
+      final filePath = await _speech.recordAudioToFile(timeoutSeconds: 4);
 
-      await handleAnswer(transcript ?? '', wordListModel);
+      if (filePath == null) {
+        _last = PracticeResult(transcript: "", score: 0, correct: false);
+        notifyListeners();
+        return;
+      }
+
+      // 2. Send audio to backend for pronunciation assessment
+      final assessment = await _speech.sendForPronunciationAssessment(
+        filePath: filePath,
+        referenceText: _target!.word,
+      );
+
+      // 3. Update app state
+      _last = PracticeResult(
+        transcript: assessment.transcript,
+        score: assessment.score,
+        correct: assessment.correct,
+      );
+
+      // 4. Save attempt + mastering logic
+      await _handlePracticeCompletion(
+        transcript: assessment.transcript,
+        score: assessment.score,
+        correct: assessment.correct,
+        wordListModel: wordListModel,
+      );
     } catch (e) {
-      await handleAnswer('', wordListModel);
+      print("Error during recording/assessment: $e");
     } finally {
       _isRecording = false;
       notifyListeners();
@@ -173,4 +201,48 @@ class PracticeModel extends ChangeNotifier {
 
   /// Count how many words mastered in the current list
   int masteredCount(String list) => masteredWordsByList[list]?.length ?? 0;
+
+  Future<void> _handlePracticeCompletion({
+    required String transcript,
+    required int score,
+    required bool correct,
+    required WordListModel wordListModel,
+  }) async {
+    if (_target == null || _userId == null) return;
+
+    final attempt = PracticeAttempt(
+      id: _uuid.v4(),
+      userId: _userId!,
+      wordList: wordListModel.selectedList ?? 'Dolch',
+      targetWord: _target!.word,
+      transcript: transcript,
+      score: score,
+      correct: correct,
+      timestamp: DateTime.now(),
+      synced: false,
+    );
+
+    await _syncService.saveAttempt(attempt);
+
+    if (correct) {
+      final list = wordListModel.selectedList!;
+      masteredWordsByList[list] ??= {};
+      masteredWordsByList[list]!.add(_target!.word);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+          'mastered_$list', masteredWordsByList[list]!.toList());
+    }
+
+    notifyListeners();
+
+    await _speech.speak(_target!.word);
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _speech.speak(_target!.sentence);
+
+    Future.delayed(const Duration(seconds: 4), () {
+      currentWordIndex++;
+      _advanceToNextWord(wordListModel);
+    });
+  }
 }

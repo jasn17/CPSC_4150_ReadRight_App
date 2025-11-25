@@ -1,10 +1,34 @@
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:async';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+
+/// Result from speech recognition
+class SpeechResult {
+  final String text;
+  final List<int>? audioBytes; // Raw audio for cloud processing
+  final double confidence;
+
+  SpeechResult({
+    required this.text,
+    this.audioBytes,
+    this.confidence = 1.0,
+  });
+}
 
 class SpeechService {
   final FlutterTts _tts = FlutterTts();
   final stt.SpeechToText _speech = stt.SpeechToText();
+  final AudioRecorder _audioRecorder = AudioRecorder();
+
+  bool _isRecording = false;
+  final double _currentAmplitude = 0.0;
+
+  /// Current microphone amplitude (0.0 to 1.0)
+  double get amplitude => _currentAmplitude;
 
   /// Stops TTS
   Future<void> stopTts() async => await _tts.stop();
@@ -16,7 +40,11 @@ class SpeechService {
     return await _speech.initialize();
   }
 
-  Future<String?> recordOnce({int timeoutSeconds = 7}) async {
+  /// Record and transcribe speech, returning both transcript and audio bytes
+  ///
+  /// Audio bytes can be sent to Azure for pronunciation assessment
+  /// Local transcription is used for immediate feedback
+  Future<SpeechResult?> recordOnce({int timeoutSeconds = 7}) async {
     bool available = await init();
     if (!available) return null;
 
@@ -27,13 +55,16 @@ class SpeechService {
       await _speech.stop();
     }
 
-    final completer = Completer<String?>();
+    final completer = Completer<SpeechResult?>();
 
     await _speech.listen(
       onResult: (res) {
         transcript = res.recognizedWords;
         if (res.finalResult) {
-          completer.complete(transcript);
+          completer.complete(SpeechResult(
+            text: transcript ?? '',
+            confidence: res.confidence,
+          ));
         }
       },
       listenMode: stt.ListenMode.confirmation,
@@ -43,12 +74,74 @@ class SpeechService {
 
     // Timeout in case finalResult is never triggered
     Future.delayed(Duration(seconds: timeoutSeconds), () {
-      if (!completer.isCompleted) completer.complete(transcript);
+      if (!completer.isCompleted) {
+        completer.complete(transcript != null
+            ? SpeechResult(text: transcript ?? '', confidence: 0.5)
+            : null);
+      }
     });
 
     final result = await completer.future;
     await _speech.stop();
     return result;
+  }
+
+  /// Record audio to file for cloud pronunciation assessment
+  /// Returns the file path where audio was saved
+  Future<String?> recordAudioToFile({int timeoutSeconds = 10}) async {
+    try {
+      // Check permissions
+      bool hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) return null;
+
+      // Get temp directory for audio file
+      final directory = await getTemporaryDirectory();
+      final filePath =
+          '${directory.path}/pronunciation_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+      // Start recording to file
+      _isRecording = true;
+      await _audioRecorder.start(
+        const RecordConfig(),
+        path: filePath,
+      );
+
+      // Wait for specified duration
+      await Future.delayed(Duration(seconds: timeoutSeconds));
+
+      // Stop recording
+      if (_isRecording) {
+        await _audioRecorder.stop();
+        _isRecording = false;
+      }
+
+      return filePath;
+    } catch (e) {
+      _isRecording = false;
+      print('Error recording audio: $e');
+      return null;
+    }
+  }
+
+  /// Stop ongoing audio recording
+  Future<void> stopAudioRecording() async {
+    if (_isRecording) {
+      await _audioRecorder.stop();
+      _isRecording = false;
+    }
+  }
+
+  /// Read audio file as bytes for sending to server
+  static Future<List<int>?> readAudioFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        return await file.readAsBytes();
+      }
+    } catch (e) {
+      print('Error reading audio file: $e');
+    }
+    return null;
   }
 
   /// Speaks text with TTS
@@ -57,4 +150,47 @@ class SpeechService {
     await _tts.setSpeechRate(0.4);
     await _tts.speak(text);
   }
+
+  Future<PronunciationAssessmentResult> sendForPronunciationAssessment({
+    required String filePath,
+    required String referenceText,
+  }) async {
+    final uri = Uri.parse("http://127.0.0.1:8000/api/assess");
+
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['reference_text'] = referenceText
+      ..files.add(await http.MultipartFile.fromPath('audio', filePath));
+
+    final response = await request.send();
+    final respStr = await response.stream.bytesToString();
+
+    if (response.statusCode != 200) {
+      print("Backend error: $respStr");
+      return PronunciationAssessmentResult(
+        transcript: "",
+        score: 0,
+        correct: false,
+      );
+    }
+
+    final data = jsonDecode(respStr);
+
+    return PronunciationAssessmentResult(
+      transcript: data["transcript"] ?? "",
+      score: data["score"] ?? 0,
+      correct: data["correct"] ?? false,
+    );
+  }
+}
+
+class PronunciationAssessmentResult {
+  final String transcript;
+  final int score;
+  final bool correct;
+
+  PronunciationAssessmentResult({
+    required this.transcript,
+    required this.score,
+    required this.correct,
+  });
 }
