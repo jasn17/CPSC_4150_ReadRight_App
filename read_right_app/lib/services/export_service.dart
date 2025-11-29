@@ -201,7 +201,7 @@ class ExportService {
       rangeStr = '_${start}_to_$end';
     }
 
-    return '${prefix}_practice_data$rangeStr\_$dateStr.$extension';
+    return '${prefix}_practice_data${rangeStr}_$dateStr.$extension';
   }
 
   Future<void> _saveAndShare(String content, String fileName) async {

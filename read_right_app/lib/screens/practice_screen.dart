@@ -146,14 +146,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
           const SizedBox(height: 16),
           if (pm.lastResult != null) _FeedbackBar(result: pm.lastResult!),
           const SizedBox(height: 16),
+          if (pm.isRecording)
+            _MicrophoneIndicator(amplitude: pm.microphoneAmplitude),
+          if (pm.isRecording) const SizedBox(height: 16),
           PrimaryButton(
             label: pm.isRecording ? 'Recording...' : 'Tap to Record',
             onPressed: pm.isRecording
                 ? null
-                : () {
-                    print('[PracticeScreen] record button tapped');
-                    pm.startRecording(context.read<WordListModel>());
-                  },
+                : () => pm.startRecording(context.read<WordListModel>()),
           ),
           const SizedBox(height: 16),
         ],
@@ -262,6 +262,63 @@ class _FeedbackBar extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text('Score: ${result.score} | Heard: "${result.transcript}"'),
+      ],
+    );
+  }
+}
+
+/// Microphone amplitude indicator - shows visual feedback during recording
+class _MicrophoneIndicator extends StatelessWidget {
+  final double amplitude; // 0.0 to 1.0
+
+  const _MicrophoneIndicator({required this.amplitude});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.mic, color: Colors.red, size: 24),
+            SizedBox(width: 12),
+            Text(
+              'Recording...',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 20,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Stack(
+            children: [
+              FractionallySizedBox(
+                widthFactor: amplitude.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.green,
+                        amplitude > 0.7 ? Colors.orange : Colors.green,
+                        amplitude > 0.9 ? Colors.red : Colors.green,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Speak clearly into your microphone',
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
       ],
     );
   }

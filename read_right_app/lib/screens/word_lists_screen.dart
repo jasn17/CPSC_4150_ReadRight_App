@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/word_list_model.dart';
 import '../models/practice_model.dart';
-import '../widgets/word_card.dart';
 
 class WordListsScreen extends StatelessWidget {
   const WordListsScreen({super.key});

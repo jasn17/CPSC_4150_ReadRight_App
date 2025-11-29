@@ -219,12 +219,12 @@ class _EmptyView extends StatelessWidget {
   const _EmptyView();
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.inbox_outlined, size: 72),
             SizedBox(height: 12),
             Text('No items yet'),

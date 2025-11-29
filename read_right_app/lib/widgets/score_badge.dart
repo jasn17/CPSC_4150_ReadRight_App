@@ -31,8 +31,8 @@ class ScoreBadge extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 36,
-          child: Text('$score', style: const TextStyle(fontSize: 22)),
           backgroundColor: bgColor,
+          child: Text('$score', style: const TextStyle(fontSize: 22)),
         ),
         if (label != null) ...[
           const SizedBox(height: 8),
