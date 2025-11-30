@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/progress_model.dart';
-import '../models/practice_model.dart';
 import '../widgets/score_badge.dart';
 import '../widgets/analytics_section.dart';
 
@@ -46,13 +45,20 @@ class _ProgressScreenState extends State<ProgressScreen> {
     
     // Get background color based on average score
     Color getBackgroundColor(int score) {
+
+      const Color gold   = Color(0xFFFFD700);
+      const Color silver = Color(0xFFC0C0C0);
+      const Color bronze = Color(0xFFCD7F32);
+
       if (score >= 90) {
-        return Colors.green.withOpacity(0.1);
+        return gold.withOpacity(0.1);
       } else if (score >= 80) {
-        return Colors.yellow.withOpacity(0.1);
+        return silver.withOpacity(0.1);
       } else if (score >= 70) {
-        return Colors.orange.withOpacity(0.1);
-      } else {
+        return bronze.withOpacity(0.1);
+      } else if (score >= 1) {   // 1–69
+        return Colors.grey.withOpacity(0.1);
+      } else {                  // score == 0
         return Colors.red.withOpacity(0.1);
       }
     }

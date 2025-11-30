@@ -3,6 +3,8 @@ import 'dart:math';
 
 
 class CharacterWidget extends StatelessWidget {
+  const CharacterWidget({super.key});
+
 
 
 

@@ -16,6 +16,8 @@ import 'services/sync_service.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'models/shellModel.dart';
+
 
 Future<void> main() async {
   await dotenv.load(fileName: '.env');
@@ -75,6 +77,7 @@ Future<void> main() async {
       ChangeNotifierProvider<SyncService>.value(value: syncService),
       ChangeNotifierProvider.value(value: practiceModel),
       ChangeNotifierProvider.value(value: progressModel),
+      ChangeNotifierProvider(create: (_) => ShellModel()),
     ],
     child: const ReadRightApp(),
   ));

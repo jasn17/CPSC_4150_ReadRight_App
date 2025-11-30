@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../models/practice_model.dart';
 import '../models/word_list_model.dart';
 import '../widgets/confetti_overlay.dart';
-import '../widgets/primary_button.dart';
 import '../widgets/flip_card.dart';
 import '../widgets/sync_status_widget.dart';
 import 'package:read_right_app/widgets/character_widget.dart';
@@ -68,7 +67,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               Expanded(
                 child: pm.isCardMode
                     ? _buildCardMode(context, wm, target)
-                    : _buildSpeechMode(context, pm, target),
+                    : _buildSpeechMode(context, wm, target, pm),
               ),
             ],
           ),
@@ -79,21 +78,25 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
+
+
   Widget _buildCardMode(
       BuildContext context, WordListModel wm, WordItem currentCard) {
     final pm = context.read<PracticeModel>();
 
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [CharacterWidget(),
-          ],
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: const [
+              CharacterWidget(),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
             child: Center(
               child: FlipCard(
                 word: currentCard.word,
@@ -106,31 +109,80 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () => wm.nextCard(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
+          const SizedBox(height: 16),
+          // Optional feedback bar placeholder (keep consistent structure)
+          if (pm.lastResult != null)
+            _FeedbackBar(result: pm.lastResult!),
+          if (pm.lastResult != null) const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Left button
+              ElevatedButton(
+                onPressed: () => wm.nextCard(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .computeLuminance() >= 0.5
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.inversePrimary,
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: Text(
+                    'Last',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-              child: const Text(
-                'Next',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+              const SizedBox(width: 16),
+
+              // Right button
+              ElevatedButton(
+                onPressed: () => wm.nextCard(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .computeLuminance() >= 0.5
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.inversePrimary,
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: Text(
+                    'Next',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-            ),
+
+
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
-
   Widget _buildSpeechMode(
-      BuildContext context, PracticeModel pm, WordItem target) {
+      BuildContext context, WordListModel wm, WordItem target, PracticeModel pm) {
+
+    // Determine main card content
+    final middle = pm.lastResult?.correct == true || pm.lastResult?.correct == false
+        ? _SentenceCard(
+      sentence: target.sentence,
+      onTap: () => pm.speakWord(target.sentence),
+    )
+        : _WordCard(
+      word: target.word,
+      onTap: () => pm.speakWord(target.word),
+    );
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -138,44 +190,84 @@ class _PracticeScreenState extends State<PracticeScreen> {
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
-            children: [CharacterWidget(),
-          ],
+            children: const [
+              CharacterWidget(),
+            ],
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: Center(
-              child: pm.lastResult?.correct == true ||
-                      pm.lastResult?.correct == false
-                  ? _SentenceCard(
-                      sentence: target.sentence,
-                      onTap: () => pm.speakWord(target.sentence),
-                    )
-                  : _WordCard(
-                      word: target.word,
-                      onTap: () => pm.speakWord(target.word),
-                    ),
-            ),
-          ),
+          Expanded(child: Center(child: middle)),
           const SizedBox(height: 16),
           if (pm.lastResult != null) _FeedbackBar(result: pm.lastResult!),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: pm.isRecording
-                ? null
-                : () => pm.startRecording(context.read<WordListModel>()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pm.isRecording
-                ? Colors.redAccent
-                : Theme.of(context).primaryColor,
-              foregroundColor: Theme.of(context).colorScheme.primary.computeLuminance() >= .5
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.inversePrimary,
-            ),
-            child: Text(
-              pm.isRecording
-                      ? 'Recording...'
-                      : 'Tap To Record',
-            ),
+          if (pm.lastResult != null) const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Left auxiliary button
+              ElevatedButton(
+                onPressed: () => wm.nextCard(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .computeLuminance() >= 0.5
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.inversePrimary,
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5, vertical: 12),
+                  child: Text(
+                    'Last',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Central main button (Tap to Record)
+              ElevatedButton(
+                onPressed: pm.isRecording
+                    ? null
+                    : () => pm.startRecording(context.read<WordListModel>()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: pm.isRecording ? Colors.redAccent : Theme.of(context).primaryColor,
+                  foregroundColor: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .computeLuminance() >= 0.5
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.inversePrimary,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: Text(pm.isRecording ? 'Recording...' : 'Tap To Record'),
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Right auxiliary button
+              ElevatedButton(
+                onPressed: () => wm.nextCard(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .computeLuminance() >= 0.5
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.inversePrimary,
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5, vertical: 12),
+                  child: Text(
+                    'Next',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
         ],

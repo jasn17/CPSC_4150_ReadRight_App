@@ -32,8 +32,6 @@ class BluePinkTheme implements AppThemeDefinition {
       onError: Colors.white,
       surface: surface,
       onSurface: onSurface,
-      background: background,
-      onBackground: onBackground,
     ),
     textTheme: const TextTheme(
       displayLarge: TextStyle(fontSize: 96, fontWeight: FontWeight.bold),
@@ -67,8 +65,6 @@ class BluePinkTheme implements AppThemeDefinition {
       onError: Colors.white,
       surface: Color(0xFF1E1E1E),
       onSurface: Colors.white70,
-      background: Color(0xFF121212),
-      onBackground: Colors.white70,
     ),
     textTheme: const TextTheme(
       bodyMedium: TextStyle(color: Colors.white),
