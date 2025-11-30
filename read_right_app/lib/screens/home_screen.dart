@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ReadRight'),
+        title: const Text('ReadRight 📚'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
