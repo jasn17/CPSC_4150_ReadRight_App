@@ -1,5 +1,5 @@
-// FILE: lib/screens/feedback_screen.dart
-// PURPOSE: Displays last result (transcript, score, correctness) and Retry action.
+// FILE: lib/screens/feedback_item_screen.dart
+// PURPOSE: Displays requested result (transcript, score, correctness)
 // TOOLS: Flutter core; provider (watch PracticeModel).
 // RELATIONSHIPS: Reads PracticeModel.lastResult; uses widgets/score_badge.dart; Retry calls PracticeModel.reset().
 

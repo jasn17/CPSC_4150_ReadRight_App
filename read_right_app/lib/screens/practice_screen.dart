@@ -119,7 +119,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
             children: [
               // Left button
               ElevatedButton(
-                onPressed: () => wm.nextCard(),
+                onPressed: () => context.read<PracticeModel>().goBack(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
@@ -142,7 +142,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
               // Right button
               ElevatedButton(
-                onPressed: () => wm.nextCard(),
+                onPressed: () => context.read<PracticeModel>().goForward(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
@@ -202,9 +202,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Left auxiliary button
+              // last button
               ElevatedButton(
-                onPressed: () => wm.nextCard(),
+                onPressed: () => context.read<PracticeModel>().goBack(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
@@ -247,9 +247,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
               const SizedBox(width: 16),
 
-              // Right auxiliary button
+              // next button
               ElevatedButton(
-                onPressed: () => wm.nextCard(),
+                onPressed: () => context.read<PracticeModel>().goForward(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)

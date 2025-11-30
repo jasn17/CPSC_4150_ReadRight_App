@@ -110,6 +110,7 @@ class PracticeModel extends ChangeNotifier {
     _advanceToNextWord(wordListModel);
   }
 
+  // made public so can be called in practice screen
   void _advanceToNextWord(WordListModel wordListModel) {
     final words = wordListModel.wordsInSelected;
     final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
@@ -126,6 +127,30 @@ class PracticeModel extends ChangeNotifier {
 
     // All mastered: stay at last word
     if (words.isNotEmpty) _target = words.last;
+    notifyListeners();
+  }
+
+  // added this to go back to the previous word, much like how the above goes to the next word
+  void _goBackToPrevious(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+    final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
+
+    // Iterate *backward* starting from currentWordIndex - 1
+    for (int i = currentWordIndex - 1; i >= 0; i--) {
+      if (!mastered.contains(words[i].word)) {
+        _target = words[i];
+        currentWordIndex = i;
+        _last = null;
+        notifyListeners();
+        return;
+      }
+    }
+
+    // If we reach the start, go to the *first* unmastered word or default to first
+    if (words.isNotEmpty) {
+      _target = words.first;
+      currentWordIndex = 0;
+    }
     notifyListeners();
   }
 
@@ -162,7 +187,8 @@ class PracticeModel extends ChangeNotifier {
 
     final correct = score > 80;
 
-    _last = PracticeResult(transcript: transcript, score: score, correct: correct);
+    _last =
+        PracticeResult(transcript: transcript, score: score, correct: correct);
 
     // Create practice attempt record
     final attempt = PracticeAttempt(
@@ -194,7 +220,8 @@ class PracticeModel extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       // IMPORTANT: Include userId in the key so each user has separate mastered words
       final masteredKey = 'mastered_${list}_$_userId';
-      await prefs.setStringList(masteredKey, masteredWordsByList[list]!.toList());
+      await prefs.setStringList(
+          masteredKey, masteredWordsByList[list]!.toList());
     }
 
     notifyListeners();
@@ -204,13 +231,38 @@ class PracticeModel extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 500));
     await _speech.speak(_target!.sentence);
 
-    // Auto-advance to next word after 10 seconds
-    Future.delayed(const Duration(seconds: 10), () {
-      currentWordIndex++;
-      _advanceToNextWord(wordListModel);
-    });
+    // Auto-advance to next word after 5 seconds if correct
+    if (correct) {
+      Future.delayed(const Duration(seconds: 5), () {
+        currentWordIndex++;
+        _advanceToNextWord(wordListModel);
+      });
+    }
   }
 
+  // call these from buttons to iterate over the list
+  void goBack(WordListModel wordListModel) {
+    if (currentWordIndex > 0) {
+      currentWordIndex--;
+    }
+
+    _goBackToPrevious(wordListModel);
+  }
+
+  void goForward(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+
+    // Prevent going out of bounds
+    if (currentWordIndex < words.length - 1) {
+      currentWordIndex++;
+    }
+
+    _advanceToNextWord(wordListModel);
+  }
+
+
+
+  /// Start recording and handle answer
 
 
   Future<void> startRecording(WordListModel wordListModel) async {
@@ -240,3 +292,4 @@ class PracticeModel extends ChangeNotifier {
   /// Count how many words mastered in the current list
   int masteredCount(String list) => masteredWordsByList[list]?.length ?? 0;
 }
+
