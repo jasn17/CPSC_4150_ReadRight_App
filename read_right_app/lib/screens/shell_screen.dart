@@ -26,14 +26,13 @@ class ShellScreen extends StatefulWidget {
 }
 
 class _ShellScreenState extends State<ShellScreen> {
-  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
     final isTeacher = context.watch<AuthModel>().role == UserRole.teacher;
 
     final shellModel = context.watch<ShellModel>();
-    final _index = shellModel.index;
+    final index = shellModel.index;
 
     final pages = <Widget>[
       const HomeScreen(),
@@ -55,9 +54,9 @@ class _ShellScreenState extends State<ShellScreen> {
     ];
 
     return Scaffold(
-      body: SafeArea(child: pages[_index]),
+      body: SafeArea(child: pages[index]),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
+        currentIndex: index,
         items: items,
         type: BottomNavigationBarType.fixed,
         onTap: (i) => shellModel.setIndex(i),
