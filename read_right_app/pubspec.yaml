@@ -42,9 +42,13 @@ flutter:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
+  flutter_launcher_icons: ^0.10.0
   flutter_lints: ^6.0.0
 
 dependency_overrides:
   record_linux: ^1.2.1
   share_plus_platform_interface: ^6.1.0
+
+flutter_icons:
+  android: true
+  image_path: "assets/RRIcon.png"
