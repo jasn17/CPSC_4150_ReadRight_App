@@ -38,6 +38,7 @@ flutter:
     - assets/SourceImages/character1.png
     - assets/SourceImages/character2.png
     - assets/SourceImages/character3.png
+    - assets/SourceImages/RRIcon.png
 
 dev_dependencies:
   flutter_test:
@@ -51,4 +52,4 @@ dependency_overrides:
 
 flutter_icons:
   android: true
-  image_path: "assets/RRIcon.png"
+  image_path: "assets/SourceImages/RRIcon.png"
