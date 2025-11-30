@@ -57,12 +57,12 @@ class WordListModel extends ChangeNotifier {
 
       if (isWordSentenceFormat) {
         list = 'Dolch';
-        word = (parts.length > 0 ? parts[0] : '').trim();
+        word = (parts.isNotEmpty ? parts[0] : '').trim();
         sentence1 = (parts.length > 1 ? parts[1] : '').trim();
         sentence2 = (parts.length > 2 ? parts[2] : '').trim();
         sentence = [sentence1, sentence2].where((s) => s.isNotEmpty).join(' ');
       } else {
-        list = (parts.length > 0 ? parts[0] : 'Default').trim();
+        list = (parts.isNotEmpty ? parts[0] : 'Default').trim();
         word = (parts.length > 1 ? parts[1] : '').trim();
         sentence = (parts.length > 2 ? parts[2] : '').trim();
         sentence1 = sentence;

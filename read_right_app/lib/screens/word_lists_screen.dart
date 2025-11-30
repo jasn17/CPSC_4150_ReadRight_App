@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/word_list_model.dart';
 import '../models/practice_model.dart';
-import '../widgets/word_card.dart';
+import '../models/shellModel.dart';
 
 class WordListsScreen extends StatelessWidget {
   const WordListsScreen({super.key});
@@ -56,7 +56,10 @@ class WordListsScreen extends StatelessWidget {
                     trailing: isMastered
                         ? const Icon(Icons.check_circle, color: Colors.green)
                         : null,
-                    onTap: () => context.read<PracticeModel>().setTarget(w),
+                    onTap: () {
+                      context.read<PracticeModel>().setTarget(w);
+                      context.read<ShellModel>().setIndex(2);
+                    },
                     textColor: Theme.of(context).colorScheme.surface.computeLuminance() >= .5
                                 ? Theme.of(context).colorScheme.inverseSurface
                                 : Theme.of(context).colorScheme.surface,
@@ -72,3 +75,4 @@ class WordListsScreen extends StatelessWidget {
     );
   }
 }
+

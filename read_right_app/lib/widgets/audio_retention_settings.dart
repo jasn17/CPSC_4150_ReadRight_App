@@ -236,7 +236,7 @@ class _AudioRetentionSettingsState extends State<AudioRetentionSettings> {
                 Switch(
                   value: _isEnabled,
                   onChanged: _toggleSetting,
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                 ),
               ],
             ),

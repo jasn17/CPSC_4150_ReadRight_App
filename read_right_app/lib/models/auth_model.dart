@@ -3,12 +3,10 @@
 // TOOLS: ChangeNotifier (Provider state), firebase_auth, firebase_database via AuthService.
 // RELATIONSHIPS: Read by app.dart and shell_screen.dart; written by login_screen.dart and settings_screen.dart.
 
-import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
 import 'practice_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/material.dart';
 
 enum UserRole { student, teacher }
 

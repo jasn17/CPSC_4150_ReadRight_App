@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/settings_model.dart';
 import '../models/auth_model.dart';
-import 'export_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

@@ -6,7 +6,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/auth_model.dart';
-import '../services/auth_service.dart';
 import 'export_screen.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {

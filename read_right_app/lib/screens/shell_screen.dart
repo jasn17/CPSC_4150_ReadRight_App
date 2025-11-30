@@ -13,6 +13,8 @@ import 'progress_screen.dart';
 import 'teacher_dashboard_screen.dart';
 import 'settings_screen.dart';
 import 'home_screen.dart';
+import '../models/shellModel.dart';
+
 
 
 
@@ -24,11 +26,14 @@ class ShellScreen extends StatefulWidget {
 }
 
 class _ShellScreenState extends State<ShellScreen> {
-  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
     final isTeacher = context.watch<AuthModel>().role == UserRole.teacher;
+
+    final shellModel = context.watch<ShellModel>();
+    final index = shellModel.index;
+
     final pages = <Widget>[
       const HomeScreen(),
       const WordListsScreen(),
@@ -49,12 +54,12 @@ class _ShellScreenState extends State<ShellScreen> {
     ];
 
     return Scaffold(
-      body: SafeArea(child: pages[_index]),
+      body: SafeArea(child: pages[index]),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
+        currentIndex: index,
         items: items,
         type: BottomNavigationBarType.fixed,
-        onTap: (i) => setState(() => _index = i),
+        onTap: (i) => shellModel.setIndex(i),
         selectedItemColor: Theme.of(context).colorScheme.secondary,
         backgroundColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Theme.of(context).colorScheme.primary.computeLuminance() > 0.5

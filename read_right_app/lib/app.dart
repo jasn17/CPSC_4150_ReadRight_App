@@ -9,7 +9,7 @@ import 'models/auth_model.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell_screen.dart';
 import 'models/settings_model.dart';
-import 'themes/blue_pink_theme.dart';
+
 
 
 class ReadRightApp extends StatelessWidget {
@@ -32,8 +32,9 @@ class ReadRightApp extends StatelessWidget {
       themeMode: settings.themeMode,
 
       home: loggedIn
-          ? const ShellScreen()        // main app shell when logged in
-          : const LoginScreen(),       // login screen otherwise
+          ? const ShellScreen()
+
+          : const LoginScreen(),
     );
   }
 }
