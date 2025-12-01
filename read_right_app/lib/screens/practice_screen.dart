@@ -6,6 +6,8 @@ import '../widgets/confetti_overlay.dart';
 import '../widgets/flip_card.dart';
 import '../widgets/sync_status_widget.dart';
 import 'package:read_right_app/widgets/character_widget.dart';
+import '/models/feedback_model.dart';
+import '/models/settings_model.dart';
 
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
@@ -17,8 +19,13 @@ class PracticeScreen extends StatefulWidget {
 class _PracticeScreenState extends State<PracticeScreen> {
   @override
   Widget build(BuildContext context) {
+
+
     final pm = context.watch<PracticeModel>();
     final wm = context.watch<WordListModel>();
+    final feedbackModel = context.read<FeedbackModel>();
+    pm.setFeedbackModel(feedbackModel);
+
     final target = pm.target;
 
     if (target == null) return const Center(child: CircularProgressIndicator());
@@ -229,7 +236,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ElevatedButton(
                 onPressed: pm.isRecording
                     ? null
-                    : () => pm.startRecording(context.read<WordListModel>()),
+                    : () => pm.startRecording(context.read<WordListModel>(), context.read<SettingsModel>().threshold),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: pm.isRecording ? Colors.redAccent : Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)

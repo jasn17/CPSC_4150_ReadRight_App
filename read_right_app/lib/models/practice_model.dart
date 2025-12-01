@@ -7,6 +7,8 @@ import '../models/word_list_model.dart';
 import '../models/practice_attempt.dart';
 import '../models/progress_model.dart';
 import 'package:uuid/uuid.dart';
+import '../models/feedback_model.dart';
+
 
 class PracticeResult {
   final String transcript;
@@ -37,6 +39,8 @@ class PracticeModel extends ChangeNotifier {
   final SyncService _syncService;
   final Uuid _uuid = const Uuid();
 
+  FeedbackModel? feedbackModel;
+
   // Optional: Reference to ProgressModel for real-time updates
   ProgressModel? _progressModel;
 
@@ -54,7 +58,9 @@ class PracticeModel extends ChangeNotifier {
   /// Set the current user ID
   void setUserId(String userId) {
     _userId = userId;
+    feedbackModel?.setUserId(userId);
   }
+
 
   /// Clear current session and reload for new user
   Future<void> switchUser(String newUserId, WordListModel wordListModel) async {
@@ -67,6 +73,11 @@ class PracticeModel extends ChangeNotifier {
     // Re-initialize with new user
     await init(wordListModel, newUserId);
     notifyListeners();
+  }
+
+  /// Set reference to FeedbackModel for history display
+  void setFeedbackModel(FeedbackModel model) {
+    feedbackModel = model;
   }
 
   /// Public setter for target
@@ -162,6 +173,7 @@ class PracticeModel extends ChangeNotifier {
     String transcript,
     WordListModel wordListModel, {
     List<int>? audioBytes,
+       required int threshold,
   }) async {
     if (_target == null || _userId == null) return;
 
@@ -185,7 +197,7 @@ class PracticeModel extends ChangeNotifier {
       score = ScoringService.computeScore(transcript, _target!.word);
     }
 
-    final correct = score > 80;
+    final correct = score > threshold;
 
     _last =
         PracticeResult(transcript: transcript, score: score, correct: correct);
@@ -223,7 +235,15 @@ class PracticeModel extends ChangeNotifier {
       await prefs.setStringList(
           masteredKey, masteredWordsByList[list]!.toList());
     }
-
+    // Add to FeedbackModel for history display
+    feedbackModel?.addFeedback(
+      FeedbackItem(
+        score: score,
+        correct: correct,
+        transcript: transcript,
+        timestamp: DateTime.now(),
+      ),
+    );
     notifyListeners();
 
     // Speak word + sentence
@@ -231,9 +251,9 @@ class PracticeModel extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 500));
     await _speech.speak(_target!.sentence);
 
-    // Auto-advance to next word after 5 seconds if correct
+    // Auto-advance to next word after 10 seconds if correct
     if (correct) {
-      Future.delayed(const Duration(seconds: 5), () {
+      Future.delayed(const Duration(seconds: 10), () {
         currentWordIndex++;
         _advanceToNextWord(wordListModel);
       });
@@ -265,7 +285,7 @@ class PracticeModel extends ChangeNotifier {
   /// Start recording and handle answer
 
 
-  Future<void> startRecording(WordListModel wordListModel) async {
+  Future<void> startRecording(WordListModel wordListModel, int threshold) async {
     if (_isRecording || _target == null) return;
 
     _isRecording = true;
@@ -280,9 +300,10 @@ class PracticeModel extends ChangeNotifier {
         result?.text ?? '',
         wordListModel,
         audioBytes: result?.audioBytes,
+        threshold: threshold,
       );
     } catch (e) {
-      await handleAnswer('', wordListModel);
+      await handleAnswer('', wordListModel, threshold: threshold);
     } finally {
       _isRecording = false;
       notifyListeners();

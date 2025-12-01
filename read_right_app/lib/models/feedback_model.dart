@@ -1,47 +1,95 @@
-// FILE: lib/models/feedback_model.dart
-// PURPOSE: handles logic for keeping and supplying feedback widgets and items to the feedback screen and feedback item screens
-// TOOLS: Flutter core; provider (watch PracticeModel).
-// RELATIONSHIPS: Reads PracticeModel.lastResult; uses widgets/score_badge.dart; Retry calls PracticeModel.reset().
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/practice_model.dart';
-import '../widgets/score_badge.dart';
-import '../widgets/primary_button.dart';
-import '/widgets/character_widget.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class FeedbackScreen extends StatelessWidget {
-  const FeedbackScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final last = context.watch<PracticeModel>().lastResult;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Feedback')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: last == null
-              ? const Text('No recent practice results.\nPractice now!', textAlign: TextAlign.center)
-              : Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CharacterWidget(),
-              const SizedBox(height: 24),
-              ScoreBadge(score: last.score),
-              const SizedBox(height: 16),
-              Text(last.correct ? '✅ Correct' : '❌ Try Again', style: const TextStyle(fontSize: 20)),
-              const SizedBox(height: 8),
-              Text('You said: "${last.transcript}"'),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Reset',
-                onPressed: () => context.read<PracticeModel>().reset(),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+
+class FeedbackModel extends ChangeNotifier {
+  final int maxItems;
+  final List<FeedbackItem> _history = [];
+  String? _userId;
+
+
+  FeedbackModel({this.maxItems = 6});
+
+  List<FeedbackItem> get history => List.unmodifiable(_history);
+
+  void addFeedback(FeedbackItem item) {
+    _history.insert(0, item);   // newest first
+
+    if (_history.length > maxItems) {
+      _history.removeLast();
+    }
+
+    notifyListeners();
+  }
+
+  FeedbackItem? getByIndex(int index) {
+    if (index < 0 || index >= _history.length) return null;
+    return _history[index];
+  }
+
+
+  void setUserId(String userId) {
+    _userId = userId;
+    _loadHistory();
+  }
+
+
+  // --------------------------
+  // Persistence
+  // --------------------------
+  Future<void> _saveHistory() async {
+    if (_userId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'feedback_$_userId';
+    final jsonList = _history.map((e) => e.toJson()).toList();
+    await prefs.setStringList(key, jsonList);
+  }
+
+  Future<void> _loadHistory() async {
+    if (_userId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'feedback_$_userId';
+    final jsonList = prefs.getStringList(key) ?? [];
+    _history
+      ..clear()
+      ..addAll(jsonList.map((s) => FeedbackItem.fromJson(s)));
+    notifyListeners();
   }
 }
+class FeedbackItem {
+  final int score;
+  final bool correct;
+  final String transcript;
+  final DateTime timestamp;
+
+  FeedbackItem({
+    required this.score,
+    required this.correct,
+    required this.transcript,
+    required this.timestamp,
+  });
+
+  // Serialization helpers
+  Map<String, dynamic> toMap() => {
+    'score': score,
+    'correct': correct,
+    'transcript': transcript,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory FeedbackItem.fromMap(Map<String, dynamic> map) => FeedbackItem(
+    score: map['score'],
+    correct: map['correct'],
+    transcript: map['transcript'],
+    timestamp: DateTime.parse(map['timestamp']),
+  );
+
+  String toJson() => json.encode(toMap());
+
+  factory FeedbackItem.fromJson(String jsonStr) =>
+      FeedbackItem.fromMap(json.decode(jsonStr));
+}
+
+

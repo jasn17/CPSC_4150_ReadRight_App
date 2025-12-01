@@ -1,43 +1,32 @@
-// FILE: lib/screens/feedback_item_screen.dart
-// PURPOSE: Displays requested result (transcript, score, correctness)
-// TOOLS: Flutter core; provider (watch PracticeModel).
-// RELATIONSHIPS: Reads PracticeModel.lastResult; uses widgets/score_badge.dart; Retry calls PracticeModel.reset().
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/practice_model.dart';
+import '../models/feedback_model.dart';
 import '../widgets/score_badge.dart';
 import '../widgets/primary_button.dart';
 import '/widgets/character_widget.dart';
 
-class FeedbackScreen extends StatelessWidget {
-  const FeedbackScreen({super.key});
+class feedback_item_screen extends StatelessWidget {
+  final FeedbackItem item;
+
+  const feedback_item_screen({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
-    final last = context.watch<PracticeModel>().lastResult;
     return Scaffold(
       appBar: AppBar(title: const Text('Feedback')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: last == null
-              ? const Text('No recent practice results.\nPractice now!', textAlign: TextAlign.center)
-              : Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CharacterWidget(),
               const SizedBox(height: 24),
-              ScoreBadge(score: last.score),
+              ScoreBadge(score: item.score),
               const SizedBox(height: 16),
-              Text(last.correct ? '✅ Correct' : '❌ Try Again', style: const TextStyle(fontSize: 20)),
+              Text(item.correct ? '✅ Correct' : '❌ Try Again',
+                  style: const TextStyle(fontSize: 20)),
               const SizedBox(height: 8),
-              Text('You said: "${last.transcript}"'),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Reset',
-                onPressed: () => context.read<PracticeModel>().reset(),
-              ),
+              Text('You said: "${item.transcript}"'),
             ],
           ),
         ),
