@@ -25,7 +25,7 @@ class WordListModel extends ChangeNotifier {
   WordItem? _currentTarget;
   int _currentCardIndex = 0;
 
-  List<String> get lists => _byList.keys.toList()..sort();
+  List<String> get lists => _byList.keys.toList()..sort(_naturalSort);
   String? get selectedList => _selectedList;
   List<WordItem> get wordsInSelected => _selectedList == null ? [] : (_byList[_selectedList] ?? []);
   WordItem? get currentTarget => _currentTarget;
@@ -136,5 +136,27 @@ class WordListModel extends ChangeNotifier {
     }
     out.add(buf.toString());
     return out;
+  }
+
+  bool _isSectionToken(String s) {
+    final u = s.toUpperCase();
+    if (u.startsWith('LIST ')) return true;
+    // Skip single vowel markers often present in the CSV
+    if (u.length == 1 && {'A', 'E', 'I', 'O', 'U'}.contains(u)) return true;
+    // Skip known headers
+    if ({'DOLCH', 'PHONICS BASIC', 'PHONICS/MINIMAL PAIRS'}.contains(u)) return true;
+    return false;
+  }
+
+  int _naturalSort(String a, String b) {
+    // Sort "List 1", "List 2", ... numerically if possible, else lexicographically
+    int? numA;
+    int? numB;
+    final ra = RegExp(r'\d+').firstMatch(a);
+    final rb = RegExp(r'\d+').firstMatch(b);
+    if (ra != null) numA = int.tryParse(ra.group(0)!);
+    if (rb != null) numB = int.tryParse(rb.group(0)!);
+    if (numA != null && numB != null) return numA.compareTo(numB);
+    return a.compareTo(b);
   }
 }

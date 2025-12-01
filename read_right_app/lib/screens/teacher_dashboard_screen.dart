@@ -51,10 +51,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     if (result == true && nameController.text.trim().isNotEmpty) {
       try {
         final authService = context.read<AuthModel>().authService;
-        await authService.createClass(
+        final newClassId = await authService.createClass(
           teacherUid: teacherUid,
           className: nameController.text.trim(),
         );
+        setState(() {
+          _selectedClassId = newClassId;
+        });
         _refresh();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -182,9 +185,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               subtitle: Text('Coming soon…'),
             ),
             const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 12),
-            const Text('Your classes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                const Text('Your classes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Create Class',
+                  onPressed: () => _showCreateClassDialog(context, auth.uid ?? ''),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Expanded(
               key: ValueKey(_refreshKey),
@@ -197,7 +208,20 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   if (snap.hasError) return Text('Error: ${snap.error}');
                   final classes = snap.data ?? [];
                   if (classes.isEmpty) {
-                    return const Center(child: Text('No classes yet. Tap + to create one.'));
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('No classes yet.'),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create your first class'),
+                            onPressed: () => _showCreateClassDialog(context, auth.uid ?? ''),
+                          ),
+                        ],
+                      ),
+                    );
                   }
                   // Show all classes in a dropdown, then students for selected class
                   final currentClass = _selectedClassId != null

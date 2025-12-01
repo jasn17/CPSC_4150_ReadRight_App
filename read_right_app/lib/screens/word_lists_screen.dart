@@ -69,9 +69,6 @@ class WordListsScreen extends StatelessWidget {
                 );
               },
             ),
-          ),
-        ],
-      ),
     );
   }
 }
