@@ -3,8 +3,10 @@
 // TOOLS: ChangeNotifier (Provider state), firebase_auth, firebase_database via AuthService.
 // RELATIONSHIPS: Read by app.dart and shell_screen.dart; written by login_screen.dart and settings_screen.dart.
 
-import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
+import 'practice_model.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 enum UserRole { student, teacher }
 
@@ -24,10 +26,11 @@ class AuthModel extends ChangeNotifier {
   UserRole get role => _role;
   AuthService get authService => _authService;
 
-  /// Sign in using email/password through Firebase Auth and load role from Realtime Database
+/// Sign in using email/password through Firebase Auth and load role from Realtime Database
   Future<void> signInWithEmailPassword({
     required String email,
     required String password,
+    required BuildContext? context, // Add context parameter
   }) async {
     final credential = await _authService.signInWithEmailAndPassword(
       email: email,
@@ -53,6 +56,13 @@ class AuthModel extends ChangeNotifier {
     _role = roleStr == 'teacher' ? UserRole.teacher : UserRole.student;
 
     _isLoggedIn = true;
+    
+    // Set user ID in PracticeModel if context is provided
+    if (context != null) {
+      final practiceModel = Provider.of<PracticeModel>(context, listen: false);
+      practiceModel.setUserId(user.uid);
+    }
+    
     notifyListeners();
   }
 

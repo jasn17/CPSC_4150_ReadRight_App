@@ -25,12 +25,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    print('* Calling dispose()');
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    print('* Calling _submit()');
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _loading = true;
@@ -40,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<AuthModel>().signInWithEmailPassword(
             email: _emailController.text.trim(),
             password: _passwordController.text,
+            context: context,
           );
       // On success, AuthModel notifies and app.dart routes to ShellScreen.
     } catch (e) {
@@ -58,7 +61,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ReadRight — Login')),
+      appBar: AppBar(
+          centerTitle: true,
+          title: const Text('ReadRight 📚✅')
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
@@ -103,6 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _loading ? null : _submit,
                   ),
                 ],
+
               ),
             ),
           ),

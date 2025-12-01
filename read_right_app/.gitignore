@@ -45,4 +45,9 @@ app.*.map.json
 /android/app/release
 
 # Firebase related
-/firebase_options.dart
+/lib/firebase_options.dart
+
+read_right_app/.gitignore
+.env
+*.env
+*.env.*

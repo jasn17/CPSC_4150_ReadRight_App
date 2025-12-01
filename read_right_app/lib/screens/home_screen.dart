@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import '../widgets/character_widget.dart';
 import '../data/db.dart';
 import '../data/item_model.dart';
-import '../widgets/item_tile.dart';
+import '../widgets/home_card.dart';
+import 'package:provider/provider.dart';
+import '../models/practice_model.dart';
+import '../models/word_list_model.dart';
+import '/services/wordOfTheDay_service.dart';
+import '/models/shellModel.dart';
+
+
+
 
 
 class HomeScreen extends StatefulWidget {
@@ -18,10 +27,45 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
 
 
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  Widget _timeGreeting(BuildContext context) {
+    final hour = DateTime
+        .now()
+        .hour;
+
+    String text;
+    if (hour >= 5 && hour < 12) {
+      text = "Good morning!";
+    } else if (hour >= 12 && hour < 18) {
+      text = "Good afternoon!";
+    } else {
+      text = "Good evening!";
+    }
+
+
+    final textColor = Colors.black;
+
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Text(
+        text,
+        style: Theme
+            .of(context)
+            .textTheme
+            .headlineSmall
+            ?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
+      ),
+    );
   }
 
 
@@ -43,196 +87,185 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _loading = false);
     }
   }
-  Future<void> _createOrEdit({Item? existing}) async {
-    final titleCtrl = TextEditingController(text: existing?.title ?? '');
-    final noteCtrl = TextEditingController(text: existing?.note ?? '');
-
-
-    final result = await showDialog<Item>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(existing == null ? 'Add item' : 'Edit item'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Title'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: noteCtrl,
-                decoration: const InputDecoration(labelText: 'Note (optional)'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final title = titleCtrl.text.trim();
-                if (title.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Title can\'t be empty')),
-                  );
-                  return;
-                }
-                final item = (existing ?? Item(title: title, note: noteCtrl.text.trim(), createdAt: DateTime.now()))
-                    .copyWith(title: title, note: noteCtrl.text.trim());
-                Navigator.pop(ctx, item);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-    if (result == null) return;
-
-
-    try {
-      if (existing == null) {
-        final inserted = await _db.insert(result);
-        setState(() => _items.insert(0, inserted));
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved')),
-        );
-      } else {
-        await _db.update(result.copyWith(id: existing.id));
-        final idx = _items.indexWhere((i) => i.id == existing.id);
-        if (idx != -1) setState(() => _items[idx] = result.copyWith(id: existing.id));
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Updated')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('DB error: $e')),
-      );
-    }
-  }
-
-
-  Future<void> _toggle(Item item) async {
-    final updated = item.copyWith(isDone: !item.isDone);
-    try {
-      await _db.update(updated);
-      final idx = _items.indexWhere((i) => i.id == item.id);
-      if (idx != -1) setState(() => _items[idx] = updated);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Couldn\'t update: $e')),
-      );
-    }
-  }
-  Future<void> _delete(Item item) async {
-    try {
-      await _db.delete(item.id!);
-      setState(() => _items.removeWhere((i) => i.id == item.id));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Deleted')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Couldn\'t delete: $e')),
-      );
-    }
-  }
-
-
-  Future<void> _clearAll() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Clear all?'),
-        content: const Text('This will remove all items.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Clear')),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    await _db.clearAll();
-    setState(() => _items.clear());
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All cleared')),
-    );
-  }
 
 
   @override
   Widget build(BuildContext context) {
+
+    final wordOfTheDayService = WordOfTheDayService(context.watch<WordListModel>());
+
+
+
+    final pm = context.watch<PracticeModel>();
+    final wm = context.watch<WordListModel>();
+
+    final mastered = pm.masteredCount(wm.selectedList ?? '');
+    final totalWords = wm.wordsInSelected.length;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solo 4 — Local Data'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            tooltip: 'Clear all',
-            onPressed: _items.isEmpty ? null : _clearAll,
-            icon: const Icon(Icons.delete_sweep_outlined),
-          ),
-        ],
+        title: const Text('ReadRight 📚'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _items.isEmpty
-          ? const _EmptyView()
-          : ListView.builder(
-        itemCount: _items.length,
-        itemBuilder: (context, i) {
-          final item = _items[i];
-          return ItemTile(
-            item: item,
-            onToggle: () => _toggle(item),
-            onEdit: () => _createOrEdit(existing: item),
-            onDelete: () => _delete(item),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _createOrEdit(),
-        tooltip: 'Add item',
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.inbox_outlined, size: 72),
-            SizedBox(height: 12),
-            Text('No items yet'),
-            SizedBox(height: 4),
-            Text('Tap + to add your first item'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Greeting with character
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme
+                    .of(context)
+                    .colorScheme
+                    .inversePrimary
+                    .withAlpha(255),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    offset: const Offset(0, 2),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CharacterWidget(),
+                  const SizedBox(width: 10),
+                  _timeGreeting(context),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Main action buttons (Word Lists, Practice, Progress, Settings)
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              children: [
+                HomeCard(
+                  icon: Icons.list,
+                  label: "Word Lists",
+                  onTap: () => context.read<ShellModel>().setIndex(1),
+                ),
+                HomeCard(
+                  icon: Icons.mic,
+                  label: "Practice",
+                  onTap: () => context.read<ShellModel>().setIndex(2),
+                ),
+                HomeCard(
+                  icon: Icons.insights,
+                  label: "Progress",
+                  onTap: () => context.read<ShellModel>().setIndex(4),
+                ),
+                HomeCard(
+                  icon: Icons.settings,
+                  label: "Settings",
+                  onTap: () => context.read<ShellModel>().setIndex(6),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+
+            // Word of The Day card
+            FutureBuilder<WordItem?>(
+              future: wordOfTheDayService.getWordOfTheDay(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData) {
+                  return Card(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        "Word of the Day unavailable",
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                final wordOfTheDay = snapshot.data!;
+                return Card(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Word of the Day:",
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          wordOfTheDay.word,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        if (wordOfTheDay.sentence.isNotEmpty)
+                          Text(
+                            wordOfTheDay.sentence,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+
+
+            const SizedBox(height: 20),
+
+            // Visual Progress / call progress bar
+            Text(
+              'Progress: $mastered / $totalWords',
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            LinearProgressIndicator(
+              value: totalWords == 0 ? 0 : mastered / totalWords,
+              minHeight: 8,
+              color: Theme.of(context).colorScheme.secondary,
+              backgroundColor: Colors.white,
+            ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 }
+
+
+

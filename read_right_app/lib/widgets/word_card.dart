@@ -13,8 +13,10 @@ class WordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Theme.of(context).colorScheme.secondary,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: ListTile(
+
         title: Text(word, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
         subtitle: (sentence == null || sentence!.isEmpty) ? null : Text(sentence!),
         trailing: const Icon(Icons.chevron_right),

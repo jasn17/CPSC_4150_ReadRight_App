@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/auth_model.dart';
+import 'export_screen.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -266,6 +267,18 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   );
                 },
               ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.download),
+              title: const Text('Export Practice Data'),
+              subtitle: const Text('Download CSV or JSON'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ExportScreen()),
+                );
+              },
             ),
           ],
         ),

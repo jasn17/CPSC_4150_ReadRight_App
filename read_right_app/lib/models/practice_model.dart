@@ -1,41 +1,316 @@
-// FILE: lib/models/practice_model.dart
-// PURPOSE: Tracks current target, mic state, and last PracticeResult.
-// TOOLS: ChangeNotifier.
-// RELATIONSHIPS: Written by practice_screen.dart; read by feedback_screen.dart; later orchestrates AudioService -> STTService -> ScoringService and persists via attempts_repository.dart.
-
 import 'package:flutter/foundation.dart';
-import 'word_list_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/speech_service.dart';
+import '../services/scoring_service.dart';
+import '../services/sync_service.dart';
+import '../models/word_list_model.dart';
+import '../models/practice_attempt.dart';
+import '../models/progress_model.dart';
+import 'package:uuid/uuid.dart';
+import '../models/feedback_model.dart';
+
 
 class PracticeResult {
   final String transcript;
   final int score; // 0-100
   final bool correct;
-  PracticeResult({required this.transcript, required this.score, required this.correct});
+
+  PracticeResult({
+    required this.transcript,
+    required this.score,
+    required this.correct,
+  });
 }
 
 class PracticeModel extends ChangeNotifier {
   WordItem? _target;
   PracticeResult? _last;
+  bool _isRecording = false;
+  bool _isCardMode = false;
+  String? _userId; // Current user ID
 
   WordItem? get target => _target;
   PracticeResult? get lastResult => _last;
+  bool get isRecording => _isRecording;
+  bool get isCardMode => _isCardMode;
+  String? get userId => _userId; // Expose userId getter
 
+  final SpeechService _speech = SpeechService();
+  final SyncService _syncService;
+  final Uuid _uuid = const Uuid();
+
+  FeedbackModel? feedbackModel;
+
+  // Optional: Reference to ProgressModel for real-time updates
+  ProgressModel? _progressModel;
+
+  Map<String, Set<String>> masteredWordsByList = {}; // list -> set of mastered words
+  int currentWordIndex = 0;
+
+  // Constructor now requires SyncService
+  PracticeModel(this._syncService);
+
+  /// Set reference to ProgressModel for real-time updates
+  void setProgressModel(ProgressModel progressModel) {
+    _progressModel = progressModel;
+  }
+
+  /// Set the current user ID
+  void setUserId(String userId) {
+    _userId = userId;
+    feedbackModel?.setUserId(userId);
+  }
+
+
+  /// Clear current session and reload for new user
+  Future<void> switchUser(String newUserId, WordListModel wordListModel) async {
+    // Clear current mastered words from memory
+    masteredWordsByList.clear();
+    currentWordIndex = 0;
+    _target = null;
+    _last = null;
+    
+    // Re-initialize with new user
+    await init(wordListModel, newUserId);
+    notifyListeners();
+  }
+
+  /// Set reference to FeedbackModel for history display
+  void setFeedbackModel(FeedbackModel model) {
+    feedbackModel = model;
+  }
+
+  /// Public setter for target
   void setTarget(WordItem item) {
     _target = item;
     _last = null;
     notifyListeners();
   }
 
-  // For skeleton screenshots: produce a deterministic fake result.
-  void fakeAssess() {
-    if (_target == null) return;
-    final t = _target!;
-    _last = PracticeResult(transcript: t.word, score: 92, correct: true);
-    notifyListeners();
-  }
-
+  /// Reset last result
   void reset() {
     _last = null;
     notifyListeners();
   }
+
+  void setCardMode(bool cardMode) {
+    _isCardMode = cardMode;
+    notifyListeners();
+  }
+
+  void toggleMode() {
+    _isCardMode = !_isCardMode;
+    notifyListeners();
+  }
+
+  /// Speak a word using TTS
+  Future<void> speakWord(String word) async {
+    await _speech.speak(word);
+  }
+
+  /// Initialize from WordListModel and persisted data
+  Future<void> init(WordListModel wordListModel, String userId) async {
+    _userId = userId;
+    final prefs = await SharedPreferences.getInstance();
+    
+    // IMPORTANT: Include userId in the key so each user has separate mastered words
+    final masteredKey = 'mastered_${wordListModel.selectedList}_$userId';
+    masteredWordsByList[wordListModel.selectedList ?? 'Dolch'] =
+        prefs.getStringList(masteredKey)?.toSet() ?? {};
+
+    _advanceToNextWord(wordListModel);
+  }
+
+  // made public so can be called in practice screen
+  void _advanceToNextWord(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+    final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
+
+    for (int i = currentWordIndex; i < words.length; i++) {
+      if (!mastered.contains(words[i].word)) {
+        _target = words[i];
+        currentWordIndex = i;
+        _last = null;
+        notifyListeners();
+        return;
+      }
+    }
+
+    // All mastered: stay at last word
+    if (words.isNotEmpty) _target = words.last;
+    notifyListeners();
+  }
+
+  // added this to go back to the previous word, much like how the above goes to the next word
+  void _goBackToPrevious(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+    final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
+
+    // Iterate *backward* starting from currentWordIndex - 1
+    for (int i = currentWordIndex - 1; i >= 0; i--) {
+      if (!mastered.contains(words[i].word)) {
+        _target = words[i];
+        currentWordIndex = i;
+        _last = null;
+        notifyListeners();
+        return;
+      }
+    }
+
+    // If we reach the start, go to the *first* unmastered word or default to first
+    if (words.isNotEmpty) {
+      _target = words.first;
+      currentWordIndex = 0;
+    }
+    notifyListeners();
+  }
+
+  /// Handle answer after recording, with optional cloud pronunciation assessment
+  /// 
+  /// If audioBytes provided, tries Azure cloud assessment first
+  /// Falls back to local Levenshtein if cloud unavailable
+  Future<void> handleAnswer(
+    String transcript,
+    WordListModel wordListModel, {
+    List<int>? audioBytes,
+       required int threshold,
+  }) async {
+    if (_target == null || _userId == null) return;
+
+    int score;
+
+    // If we have audio bytes, try cloud assessment
+    if (audioBytes != null && audioBytes.isNotEmpty) {
+      final cloudAssessment = await ScoringService.assessWithCloudFallback(
+        audioBytes: audioBytes,
+        targetWord: _target!.word,
+        userId: _userId,
+      );
+      score = cloudAssessment.score;
+
+      // If cloud unavailable (score == 0), fall back to local transcript scoring
+      if (score == 0 && transcript.isNotEmpty) {
+        score = ScoringService.computeScore(transcript, _target!.word);
+      }
+    } else {
+      // No audio bytes - use local transcript scoring only
+      score = ScoringService.computeScore(transcript, _target!.word);
+    }
+
+    final correct = score > threshold;
+
+    _last =
+        PracticeResult(transcript: transcript, score: score, correct: correct);
+
+    // Create practice attempt record
+    final attempt = PracticeAttempt(
+      id: _uuid.v4(),
+      userId: _userId!,
+      wordList: wordListModel.selectedList ?? 'Dolch',
+      targetWord: _target!.word,
+      transcript: transcript,
+      score: score,
+      correct: correct,
+      timestamp: DateTime.now(),
+      synced: false,
+    );
+
+    // Save to local DB and queue for sync
+    await _syncService.saveAttempt(attempt);
+
+    // Update ProgressModel in real-time if available
+    if (_progressModel != null) {
+      _progressModel!.add(_target!.word, score, correct);
+    }
+
+    // Mark mastered if correct
+    if (correct) {
+      final list = wordListModel.selectedList!;
+      masteredWordsByList[list] ??= {};
+      masteredWordsByList[list]!.add(_target!.word);
+
+      final prefs = await SharedPreferences.getInstance();
+      // IMPORTANT: Include userId in the key so each user has separate mastered words
+      final masteredKey = 'mastered_${list}_$_userId';
+      await prefs.setStringList(
+          masteredKey, masteredWordsByList[list]!.toList());
+    }
+    // Add to FeedbackModel for history display
+    feedbackModel?.addFeedback(
+      FeedbackItem(
+        score: score,
+        correct: correct,
+        transcript: transcript,
+        timestamp: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+
+    // Speak word + sentence
+    await _speech.speak(_target!.word);
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _speech.speak(_target!.sentence);
+
+    // Auto-advance to next word after 10 seconds if correct
+    if (correct) {
+      Future.delayed(const Duration(seconds: 10), () {
+        currentWordIndex++;
+        _advanceToNextWord(wordListModel);
+      });
+    }
+  }
+
+  // call these from buttons to iterate over the list
+  void goBack(WordListModel wordListModel) {
+    if (currentWordIndex > 0) {
+      currentWordIndex--;
+    }
+
+    _goBackToPrevious(wordListModel);
+  }
+
+  void goForward(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+
+    // Prevent going out of bounds
+    if (currentWordIndex < words.length - 1) {
+      currentWordIndex++;
+    }
+
+    _advanceToNextWord(wordListModel);
+  }
+
+
+
+  /// Start recording and handle answer
+
+
+  Future<void> startRecording(WordListModel wordListModel, int threshold) async {
+    if (_isRecording || _target == null) return;
+
+    _isRecording = true;
+    notifyListeners();
+
+    try {
+      await _speech.stopListening();
+      final result = await _speech.recordOnce(timeoutSeconds: 5);
+      
+      // Pass both transcript and audio bytes if available
+      await handleAnswer(
+        result?.text ?? '',
+        wordListModel,
+        audioBytes: result?.audioBytes,
+        threshold: threshold,
+      );
+    } catch (e) {
+      await handleAnswer('', wordListModel, threshold: threshold);
+    } finally {
+      _isRecording = false;
+      notifyListeners();
+    }
+  }
+
+  /// Count how many words mastered in the current list
+  int masteredCount(String list) => masteredWordsByList[list]?.length ?? 0;
 }
+
