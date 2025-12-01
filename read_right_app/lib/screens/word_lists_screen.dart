@@ -16,56 +16,61 @@ class WordListsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final model = context.watch<WordListModel>();
     final lists = model.lists;
-    final words = model.wordsInSelected;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Word Lists')),
-      body: Column(
-        children: [
-          if (lists.isEmpty)
-            const Padding(
+      body: lists.isEmpty
+          ? const Padding(
               padding: EdgeInsets.all(16.0),
               child: Text('No lists found. Check assets/seed_words.csv in pubspec.yaml.'),
-            ),
-          if (lists.isNotEmpty)
-            SizedBox(
-              height: 48,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                scrollDirection: Axis.horizontal,
-                itemCount: lists.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final list = lists[i];
-                  final selected = list == model.selectedList;
-                  return ChoiceChip(
-                    label: Text(list),
-                    selected: selected,
-                    onSelected: (_) => context.read<WordListModel>().selectList(list),
-                  );
-                },
-              ),
-            ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView.builder(
-              itemCount: words.length,
-              itemBuilder: (_, i) {
-                final w = words[i];
-                return InkWell(
-                  onTap: () {
-                    context.read<PracticeModel>().setTarget(w);
-                    ScaffoldMessenger.of(_).showSnackBar(
-                      SnackBar(content: Text('Selected "${w.word}" for practice')),
-                    );
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 4),
+              itemCount: lists.length,
+              itemBuilder: (ctx, i) {
+                final list = lists[i];
+                final isSelected = list == model.selectedList;
+                final words = model.wordsFor(list);
+                return ExpansionTile(
+                  key: PageStorageKey('list-$list'),
+                  title: Text(
+                    list,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  initiallyExpanded: isSelected,
+                  onExpansionChanged: (expanded) {
+                    if (expanded) {
+                      context.read<WordListModel>().selectList(list);
+                    }
                   },
-                  child: WordCard(word: w.word, sentence: w.sentence),
+                  children: [
+                    if (words.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text('No words in this list.'),
+                      ),
+                    if (words.isNotEmpty)
+                      ...words.map((w) {
+                        return InkWell(
+                          onTap: () {
+                            context.read<PracticeModel>().setTarget(w);
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text('Selected "${w.word}" for practice')),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            child: WordCard(word: w.word, sentence: w.sentence),
+                          ),
+                        );
+                      }).toList(),
+                  ],
                 );
               },
             ),
-          ),
-        ],
-      ),
     );
   }
 }
