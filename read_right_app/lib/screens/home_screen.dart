@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Theme
                     .of(context)
                     .colorScheme
-                    .secondary
+                    .inversePrimary
                     .withAlpha(255),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.grey.shade300, width: 1.5),

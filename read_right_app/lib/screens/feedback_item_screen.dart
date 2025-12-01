@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/feedback_model.dart';
 import '../widgets/score_badge.dart';
-import '../widgets/primary_button.dart';
 import '/widgets/character_widget.dart';
 
 class feedback_item_screen extends StatelessWidget {
