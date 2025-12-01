@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import '../services/local_db_service.dart';
 import '../models/practice_attempt.dart';
 
+
+
 class AttemptSummary {
   final String word;
   final int score;
@@ -185,4 +187,5 @@ class ProgressModel extends ChangeNotifier {
     // Return difference (positive = improvement, negative = decline)
     return recentAvg - olderAvg;
   }
+
 }

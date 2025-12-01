@@ -17,6 +17,7 @@ import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'models/shellModel.dart';
+import 'models/feedback_model.dart';
 
 
 Future<void> main() async {
@@ -32,6 +33,8 @@ Future<void> main() async {
   final syncService = SyncService();
   final practiceModel = PracticeModel(syncService);
   final progressModel = ProgressModel();
+  final feedbackModel = FeedbackModel(maxItems: 6);
+
 
   // Load word lists first
   await wordListModel.loadFromAssets();
@@ -49,6 +52,9 @@ Future<void> main() async {
 
   // Connect PracticeModel to ProgressModel for real-time updates
   practiceModel.setProgressModel(progressModel);
+
+  // Connect PracticeModel to FeedbackModel for history display
+  practiceModel.setFeedbackModel(feedbackModel);
 
   // Listen for auth state changes and update models accordingly
   FirebaseAuth.instance.authStateChanges().listen((User? user) async {
@@ -78,6 +84,7 @@ Future<void> main() async {
       ChangeNotifierProvider.value(value: practiceModel),
       ChangeNotifierProvider.value(value: progressModel),
       ChangeNotifierProvider(create: (_) => ShellModel()),
+      ChangeNotifierProvider(create: (_) => FeedbackModel(maxItems: 5)),
     ],
     child: const ReadRightApp(),
   ));

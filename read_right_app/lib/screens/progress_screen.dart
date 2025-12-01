@@ -42,34 +42,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
   @override
   Widget build(BuildContext context) {
     final model = context.watch<ProgressModel>();
-    
-    // Get background color based on average score
-    Color getBackgroundColor(int score) {
 
-      const Color gold   = Color(0xFFFFD700);
-      const Color silver = Color(0xFFC0C0C0);
-      const Color bronze = Color(0xFFCD7F32);
-
-      if (score >= 90) {
-        return gold.withOpacity(0.1);
-      } else if (score >= 80) {
-        return silver.withOpacity(0.1);
-      } else if (score >= 70) {
-        return bronze.withOpacity(0.1);
-      } else if (score >= 1) {   // 1–69
-        return Colors.grey.withOpacity(0.1);
-      } else {                  // score == 0
-        return Colors.red.withOpacity(0.1);
-      }
-    }
 
     return Scaffold(
-      backgroundColor: model.attempts.isNotEmpty 
-          ? getBackgroundColor(model.average)
-          : null,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Progress'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         elevation: 0,
         actions: [
           IconButton(
@@ -191,7 +170,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       color = Colors.yellow.shade700;
     } else if (score >= 70) {
       label = 'Keep Going! 💪';
-      color = Colors.orange;
+      color = Colors.grey;
     } else {
       label = 'Practice More! 📚';
       color = Colors.red;

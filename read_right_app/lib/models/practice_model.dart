@@ -7,6 +7,8 @@ import '../models/word_list_model.dart';
 import '../models/practice_attempt.dart';
 import '../models/progress_model.dart';
 import 'package:uuid/uuid.dart';
+import '../models/feedback_model.dart';
+
 
 class PracticeResult {
   final String transcript;
@@ -37,6 +39,8 @@ class PracticeModel extends ChangeNotifier {
   final SyncService _syncService;
   final Uuid _uuid = const Uuid();
 
+  FeedbackModel? feedbackModel;
+
   // Optional: Reference to ProgressModel for real-time updates
   ProgressModel? _progressModel;
 
@@ -54,7 +58,9 @@ class PracticeModel extends ChangeNotifier {
   /// Set the current user ID
   void setUserId(String userId) {
     _userId = userId;
+    feedbackModel?.setUserId(userId);
   }
+
 
   /// Clear current session and reload for new user
   Future<void> switchUser(String newUserId, WordListModel wordListModel) async {
@@ -67,6 +73,11 @@ class PracticeModel extends ChangeNotifier {
     // Re-initialize with new user
     await init(wordListModel, newUserId);
     notifyListeners();
+  }
+
+  /// Set reference to FeedbackModel for history display
+  void setFeedbackModel(FeedbackModel model) {
+    feedbackModel = model;
   }
 
   /// Public setter for target
@@ -110,6 +121,7 @@ class PracticeModel extends ChangeNotifier {
     _advanceToNextWord(wordListModel);
   }
 
+  // made public so can be called in practice screen
   void _advanceToNextWord(WordListModel wordListModel) {
     final words = wordListModel.wordsInSelected;
     final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
@@ -129,6 +141,30 @@ class PracticeModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // added this to go back to the previous word, much like how the above goes to the next word
+  void _goBackToPrevious(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+    final mastered = masteredWordsByList[wordListModel.selectedList] ?? {};
+
+    // Iterate *backward* starting from currentWordIndex - 1
+    for (int i = currentWordIndex - 1; i >= 0; i--) {
+      if (!mastered.contains(words[i].word)) {
+        _target = words[i];
+        currentWordIndex = i;
+        _last = null;
+        notifyListeners();
+        return;
+      }
+    }
+
+    // If we reach the start, go to the *first* unmastered word or default to first
+    if (words.isNotEmpty) {
+      _target = words.first;
+      currentWordIndex = 0;
+    }
+    notifyListeners();
+  }
+
   /// Handle answer after recording, with optional cloud pronunciation assessment
   /// 
   /// If audioBytes provided, tries Azure cloud assessment first
@@ -137,6 +173,7 @@ class PracticeModel extends ChangeNotifier {
     String transcript,
     WordListModel wordListModel, {
     List<int>? audioBytes,
+       required int threshold,
   }) async {
     if (_target == null || _userId == null) return;
 
@@ -160,9 +197,10 @@ class PracticeModel extends ChangeNotifier {
       score = ScoringService.computeScore(transcript, _target!.word);
     }
 
-    final correct = score > 80;
+    final correct = score > threshold;
 
-    _last = PracticeResult(transcript: transcript, score: score, correct: correct);
+    _last =
+        PracticeResult(transcript: transcript, score: score, correct: correct);
 
     // Create practice attempt record
     final attempt = PracticeAttempt(
@@ -194,9 +232,18 @@ class PracticeModel extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       // IMPORTANT: Include userId in the key so each user has separate mastered words
       final masteredKey = 'mastered_${list}_$_userId';
-      await prefs.setStringList(masteredKey, masteredWordsByList[list]!.toList());
+      await prefs.setStringList(
+          masteredKey, masteredWordsByList[list]!.toList());
     }
-
+    // Add to FeedbackModel for history display
+    feedbackModel?.addFeedback(
+      FeedbackItem(
+        score: score,
+        correct: correct,
+        transcript: transcript,
+        timestamp: DateTime.now(),
+      ),
+    );
     notifyListeners();
 
     // Speak word + sentence
@@ -204,16 +251,41 @@ class PracticeModel extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 500));
     await _speech.speak(_target!.sentence);
 
-    // Auto-advance to next word after 10 seconds
-    Future.delayed(const Duration(seconds: 10), () {
+    // Auto-advance to next word after 10 seconds if correct
+    if (correct) {
+      Future.delayed(const Duration(seconds: 10), () {
+        currentWordIndex++;
+        _advanceToNextWord(wordListModel);
+      });
+    }
+  }
+
+  // call these from buttons to iterate over the list
+  void goBack(WordListModel wordListModel) {
+    if (currentWordIndex > 0) {
+      currentWordIndex--;
+    }
+
+    _goBackToPrevious(wordListModel);
+  }
+
+  void goForward(WordListModel wordListModel) {
+    final words = wordListModel.wordsInSelected;
+
+    // Prevent going out of bounds
+    if (currentWordIndex < words.length - 1) {
       currentWordIndex++;
-      _advanceToNextWord(wordListModel);
-    });
+    }
+
+    _advanceToNextWord(wordListModel);
   }
 
 
 
-  Future<void> startRecording(WordListModel wordListModel) async {
+  /// Start recording and handle answer
+
+
+  Future<void> startRecording(WordListModel wordListModel, int threshold) async {
     if (_isRecording || _target == null) return;
 
     _isRecording = true;
@@ -228,9 +300,10 @@ class PracticeModel extends ChangeNotifier {
         result?.text ?? '',
         wordListModel,
         audioBytes: result?.audioBytes,
+        threshold: threshold,
       );
     } catch (e) {
-      await handleAnswer('', wordListModel);
+      await handleAnswer('', wordListModel, threshold: threshold);
     } finally {
       _isRecording = false;
       notifyListeners();
@@ -240,3 +313,4 @@ class PracticeModel extends ChangeNotifier {
   /// Count how many words mastered in the current list
   int masteredCount(String list) => masteredWordsByList[list]?.length ?? 0;
 }
+
