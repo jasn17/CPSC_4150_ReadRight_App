@@ -247,7 +247,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                       : Theme.of(context).colorScheme.inversePrimary,
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                   child: Text(pm.isRecording ? 'Recording...' : 'Tap To Record'),
                 ),
               ),
