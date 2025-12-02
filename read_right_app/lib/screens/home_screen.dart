@@ -171,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 HomeCard(
                   icon: Icons.settings,
                   label: "Settings",
-                  onTap: () => context.read<ShellModel>().setIndex(6),
+                  onTap: () => context.read<ShellModel>().setIndex(5),
                 ),
               ],
             ),
