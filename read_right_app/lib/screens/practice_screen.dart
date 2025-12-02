@@ -19,8 +19,6 @@ class PracticeScreen extends StatefulWidget {
 class _PracticeScreenState extends State<PracticeScreen> {
   @override
   Widget build(BuildContext context) {
-
-
     final pm = context.watch<PracticeModel>();
     final wm = context.watch<WordListModel>();
     final feedbackModel = context.read<FeedbackModel>();
@@ -85,8 +83,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-
-
   Widget _buildCardMode(
       BuildContext context, WordListModel wm, WordItem currentCard) {
     final pm = context.read<PracticeModel>();
@@ -109,30 +105,33 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 word: currentCard.word,
                 sentence1: currentCard.sentence1,
                 sentence2: currentCard.sentence2,
-                onTap: () {
-                  // Speak the word when card is tapped
-                  pm.speakWord(currentCard.word);
+                onFrontTap: () => pm.speakWord(currentCard.word),
+                onBackTap: () {
+                  pm.speakWord(
+                      "${currentCard.sentence1}. ${currentCard.sentence2}");
                 },
               ),
             ),
           ),
           const SizedBox(height: 16),
           // Optional feedback bar placeholder (keep consistent structure)
-          if (pm.lastResult != null)
-            _FeedbackBar(result: pm.lastResult!),
+          if (pm.lastResult != null) _FeedbackBar(result: pm.lastResult!),
           if (pm.lastResult != null) const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Left button
               ElevatedButton(
-                onPressed: () => context.read<PracticeModel>().goBack(context.read<WordListModel>()),
+                onPressed: () => context
+                    .read<PracticeModel>()
+                    .goBack(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .computeLuminance() >= 0.5
+                              .colorScheme
+                              .primary
+                              .computeLuminance() >=
+                          0.5
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.inversePrimary,
                 ),
@@ -149,13 +148,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
               // Right button
               ElevatedButton(
-                onPressed: () => context.read<PracticeModel>().goForward(context.read<WordListModel>()),
+                onPressed: () => context
+                    .read<PracticeModel>()
+                    .goForward(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .computeLuminance() >= 0.5
+                              .colorScheme
+                              .primary
+                              .computeLuminance() >=
+                          0.5
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.inversePrimary,
                 ),
@@ -167,8 +169,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   ),
                 ),
               ),
-
-
             ],
           ),
           const SizedBox(height: 16),
@@ -176,19 +176,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
       ),
     );
   }
-  Widget _buildSpeechMode(
-      BuildContext context, WordListModel wm, WordItem target, PracticeModel pm) {
 
+  Widget _buildSpeechMode(BuildContext context, WordListModel wm,
+      WordItem target, PracticeModel pm) {
     // Determine main card content
-    final middle = pm.lastResult?.correct == true || pm.lastResult?.correct == false
-        ? _SentenceCard(
-      sentence: target.sentence,
-      onTap: () => pm.speakWord(target.sentence),
-    )
-        : _WordCard(
-      word: target.word,
-      onTap: () => pm.speakWord(target.word),
-    );
+    final middle =
+        pm.lastResult?.correct == true || pm.lastResult?.correct == false
+            ? _SentenceCard(
+                sentence: target.sentence,
+                onTap: () => pm.speakWord(target.sentence),
+              )
+            : _WordCard(
+                word: target.word,
+                onTap: () => pm.speakWord(target.word),
+              );
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -211,13 +212,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
             children: [
               // last button
               ElevatedButton(
-                onPressed: () => context.read<PracticeModel>().goBack(context.read<WordListModel>()),
+                onPressed: () => context
+                    .read<PracticeModel>()
+                    .goBack(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .computeLuminance() >= 0.5
+                              .colorScheme
+                              .primary
+                              .computeLuminance() >=
+                          0.5
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.inversePrimary,
                 ),
@@ -236,19 +240,25 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ElevatedButton(
                 onPressed: pm.isRecording
                     ? null
-                    : () => pm.startRecording(context.read<WordListModel>(), context.read<SettingsModel>().threshold),
+                    : () => pm.startRecording(context.read<WordListModel>(),
+                        context.read<SettingsModel>().threshold),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: pm.isRecording ? Colors.redAccent : Theme.of(context).primaryColor,
+                  backgroundColor: pm.isRecording
+                      ? Colors.redAccent
+                      : Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .computeLuminance() >= 0.5
+                              .colorScheme
+                              .primary
+                              .computeLuminance() >=
+                          0.5
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.inversePrimary,
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  child: Text(pm.isRecording ? 'Recording...' : 'Tap To Record'),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  child:
+                      Text(pm.isRecording ? 'Recording...' : 'Tap To Record'),
                 ),
               ),
 
@@ -256,13 +266,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
               // next button
               ElevatedButton(
-                onPressed: () => context.read<PracticeModel>().goForward(context.read<WordListModel>()),
+                onPressed: () => context
+                    .read<PracticeModel>()
+                    .goForward(context.read<WordListModel>()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .computeLuminance() >= 0.5
+                              .colorScheme
+                              .primary
+                              .computeLuminance() >=
+                          0.5
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.inversePrimary,
                 ),
@@ -306,7 +319,11 @@ class _WordCard extends StatelessWidget {
                   Text(
                     word,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.surface.computeLuminance() >= .5
+                      color: Theme.of(context)
+                                  .colorScheme
+                                  .surface
+                                  .computeLuminance() >=
+                              .5
                           ? Theme.of(context).colorScheme.inverseSurface
                           : Theme.of(context).colorScheme.surface,
                       fontSize: 48,

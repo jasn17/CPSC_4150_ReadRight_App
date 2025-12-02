@@ -1,4 +1,3 @@
-// FILE: lib/widgets/flip_card.dart
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -6,14 +5,17 @@ class FlipCard extends StatefulWidget {
   final String word;
   final String sentence1;
   final String sentence2;
-  final VoidCallback? onTap; // Add this callback
+
+  final VoidCallback? onFrontTap; // NEW
+  final VoidCallback? onBackTap; // NEW
 
   const FlipCard({
     super.key,
     required this.word,
     required this.sentence1,
     required this.sentence2,
-    this.onTap, // Add this parameter
+    this.onFrontTap,
+    this.onBackTap,
   });
 
   @override
@@ -48,16 +50,30 @@ class _FlipCardState extends State<FlipCard>
     super.dispose();
   }
 
-  void _flip() {
-    if (_isShowingFront) {
+  void _flip() async {
+    if (_animationController.isAnimating) return;
+
+    final wasFront = _isShowingFront;
+
+    // Trigger the speech callback
+    if (wasFront) {
+      widget.onFrontTap?.call();
+    } else {
+      widget.onBackTap?.call();
+    }
+
+    // Different wait times
+    final waitTime = wasFront ? 1 : 4;
+    await Future.delayed(Duration(seconds: waitTime));
+
+    // Flip
+    if (wasFront) {
       _animationController.forward();
     } else {
       _animationController.reverse();
     }
+
     _isShowingFront = !_isShowingFront;
-    
-    // Call the onTap callback when card is tapped
-    widget.onTap?.call();
   }
 
   @override
