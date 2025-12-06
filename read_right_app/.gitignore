@@ -51,3 +51,5 @@ read_right_app/.gitignore
 .env
 *.env
 *.env.*
+
+read_right_app/test/cloud_provider_test_cases.md
