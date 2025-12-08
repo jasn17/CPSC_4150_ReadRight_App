@@ -34,6 +34,8 @@ class WordListsScreen extends StatelessWidget {
                     label: Text(list),
                     selected: selected,
                     onSelected: (_) => model.selectList(list),
+                    selectedColor: Theme.of(context).colorScheme.secondary,
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
                   );
                 },
               ),
