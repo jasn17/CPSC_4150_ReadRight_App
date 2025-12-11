@@ -21,13 +21,13 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const ListTile(title: Text('Assessment Provider')),
           RadioListTile<String>(
-            title: const Text('Local (mock)'),
+            title: const Text('Local'),
             value: 'local',
             groupValue: s.assessor,
             onChanged: (v) => context.read<SettingsModel>().assessor = v!,
           ),
           RadioListTile<String>(
-            title: const Text('Cloud (placeholder)'),
+            title: const Text('Cloud'),
             value: 'cloud',
             groupValue: s.assessor,
             onChanged: (v) => context.read<SettingsModel>().assessor = v!,
@@ -51,7 +51,7 @@ class SettingsScreen extends StatelessWidget {
           ),
 
           SwitchListTile(
-            title: const Text('Retain Audio (placeholder)'),
+            title: const Text('Retain Audio'),
             value: s.retainAudio,
             onChanged: (v) => context.read<SettingsModel>().retainAudio = v,
           ),
